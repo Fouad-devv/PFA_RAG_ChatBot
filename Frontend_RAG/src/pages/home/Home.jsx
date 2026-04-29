@@ -1,9 +1,9 @@
-// Home.jsx
 import { useEffect, useState, useRef, useCallback } from "react";
 import useAxiosPrivate from "../../api/useAxiosPrivate.js";
 import { useKeycloak } from "@react-keycloak/web";
 import Sidebar from "./Sidebar.jsx";
 import ChatWindow from "./ChatWindow.jsx";
+import { ToastContainer } from "../../components/Toast.jsx";
 
 export const Home = () => {
   const { keycloak, initialized } = useKeycloak();
@@ -20,12 +20,11 @@ export const Home = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [openSpaceUser, setOpenSpaceUser] = useState(null);
 
-  const messagesEndRef = useRef(null);
   const username = keycloak.tokenParsed?.preferred_username || "User";
 
 
-  // Fetch conversations
-  const fetchConversationsList = useCallback(async () => {
+  // ── Fetch conversations list ──────────────────────────────────────────────
+  const fetchConversations = useCallback(async () => {
     if (!keycloak?.authenticated) return;
     setLoadingConversations(true);
     try {
@@ -38,8 +37,9 @@ export const Home = () => {
     }
   }, [keycloak, axiosPrivate]);
 
-  //Fetch messages for a conversation
-  const fetchMessagesList = useCallback(async (conversationId) => {
+
+  // ── Fetch messages for a conversation ─────────────────────────────────────
+  const fetchMessages = useCallback(async (conversationId) => {
     setLoadingMessages(true);
     try {
       const res = await axiosPrivate.get(`/api/home/conversations/${conversationId}`);
@@ -52,45 +52,30 @@ export const Home = () => {
     }
   }, [axiosPrivate]);
 
-  // Fetch conversations
-  const fetchConversations = useCallback(async () => {
-    return fetchConversationsList();
-  }, [fetchConversationsList]);
 
-  // Fetch messages  
-  const fetchMessages = useCallback(async (conversationId) => {
-    return fetchMessagesList(conversationId);
-  }, [fetchMessagesList]);
-
-
-
-  //_____________________ Select a conversation ________________________
+  // ── Select a conversation ─────────────────────────────────────────────────
   const handleSelectConversation = useCallback((conversation) => {
     setActiveConversation(conversation);
     fetchMessages(conversation._id);
   }, [fetchMessages]);
 
-  
 
-  //______________________________ Create new conversation _________________________________________-
+  // ── Create new conversation ───────────────────────────────────────────────
   const handleNewConversation = useCallback(async () => {
     try {
-      const res = await axiosPrivate.post("/api/home/newChat", { message: `Hello ${username} !` });
+      const res = await axiosPrivate.post("/api/home/newChat", { message: `Bonjour ${username} ! Comment puis-je vous aider ?` });
       const newConv = {
         _id: res.data.conversationId,
         title: res.data.title || "New Conversation",
         lastMessagePreview: res.data.initialMessage || "",
         updatedAt: new Date(),
       };
-      // Clear chat
       setActiveConversation(null);
       setMessages([]);
-      // Add new conversation
       setConversations((prev) => [newConv, ...prev]);
-      // Open it
       setActiveConversation(newConv);
       if (res.data.initialMessage) {
-        setMessages([{ role: "assistant", content: res.data.initialMessage }]);
+        setMessages([{ role: "assistant", content: res.data.initialMessage, createdAt: new Date() }]);
       }
     } catch (err) {
       console.error("Failed to create new conversation", err);
@@ -98,16 +83,14 @@ export const Home = () => {
   }, [username, axiosPrivate]);
 
 
+  // ── Send message ──────────────────────────────────────────────────────────
+  const handleSendMessage = useCallback(async () => {
+    if (!newMessage.trim() || !activeConversation || loadingResponse) return;
 
-  //____________________________ Send message ________________________________________
-  const handleSendMessage = async () => {
-    if (!newMessage.trim() || !activeConversation) return;
-
-    const userMessage = { role: "user", content: newMessage };
-    setMessages((prev) => [...prev, userMessage]);
+    const userMsg = { role: "user", content: newMessage, createdAt: new Date() };
+    setMessages((prev) => [...prev, userMsg]);
     setNewMessage("");
     setLoadingResponse(true);
-
 
     try {
       const res = await axiosPrivate.post("/api/home/response", {
@@ -115,111 +98,176 @@ export const Home = () => {
         conversationId: activeConversation._id,
       });
 
-      const assistantMessage = { role: "assistant", content: res.data.answer };
-      setMessages((prev) => [...prev, assistantMessage]);
+      const aiMsg = { role: "assistant", content: res.data.answer, createdAt: new Date() };
+      setMessages((prev) => [...prev, aiMsg]);
 
-      setConversations((prev) => prev.map((c) =>
+      setConversations((prev) =>
+        prev.map((c) =>
           c._id === activeConversation._id
-            ? { ...c,
-              title: res.data.title,
-              lastMessagePreview: res.data.answer, 
-              updatedAt: new Date() 
-            }
+            ? { ...c, title: res.data.title, lastMessagePreview: res.data.answer, updatedAt: new Date() }
             : c
-          )
+        )
       );
-
-      // Also update activeConversation so the title updates in the header
       setActiveConversation((prev) => ({
         ...prev,
-        lastMessagePreview: res.data.answer,
         title: res.data.title || prev.title,
+        lastMessagePreview: res.data.answer,
       }));
-
     } catch (err) {
       console.error("Failed to send message", err);
     } finally {
-    setLoadingResponse(false); 
+      setLoadingResponse(false);
     }
-  };
+  }, [newMessage, activeConversation, axiosPrivate, loadingResponse]);
 
 
-  //______________________ Delete conversation __________________________________________
-  const removeConversationFromState = async (conversationId) => {
-  const updated = conversations.filter(c => c._id !== conversationId);
+  // ── Starter question shortcut ─────────────────────────────────────────────
+  const handleStarterQuestion = useCallback((question) => {
+    setNewMessage(question);
+    setTimeout(() => {
+      // trigger send with the question directly
+      if (!activeConversation || loadingResponse) return;
+      const userMsg = { role: "user", content: question, createdAt: new Date() };
+      setMessages((prev) => [...prev, userMsg]);
+      setLoadingResponse(true);
+      axiosPrivate
+        .post("/api/home/response", { message: question, conversationId: activeConversation._id })
+        .then((res) => {
+          setMessages((prev) => [...prev, { role: "assistant", content: res.data.answer, createdAt: new Date() }]);
+          setConversations((prev) =>
+            prev.map((c) =>
+              c._id === activeConversation._id
+                ? { ...c, title: res.data.title, lastMessagePreview: res.data.answer, updatedAt: new Date() }
+                : c
+            )
+          );
+          setActiveConversation((prev) => ({ ...prev, title: res.data.title || prev.title }));
+        })
+        .catch(() => {})
+        .finally(() => { setLoadingResponse(false); setNewMessage(""); });
+    }, 0);
+  }, [activeConversation, axiosPrivate, loadingResponse]);
 
-  setConversations(updated);
 
-  if (activeConversation?._id === conversationId) {
-    const nextConversation = updated[0] || null;
-    setActiveConversation(nextConversation);
-
-    if (nextConversation) {
-      fetchMessages(nextConversation._id);
-    } else {
-      setMessages([]);
-      handleNewConversation(); 
+  // ── Rename conversation ───────────────────────────────────────────────────
+  const handleRenameConversation = useCallback(async (conversationId, newTitle) => {
+    try {
+      await axiosPrivate.patch(`/api/home/conversations/${conversationId}`, { title: newTitle });
+      setConversations((prev) =>
+        prev.map((c) => (c._id === conversationId ? { ...c, title: newTitle } : c))
+      );
+      if (activeConversation?._id === conversationId) {
+        setActiveConversation((prev) => ({ ...prev, title: newTitle }));
+      }
+    } catch (err) {
+      console.error("Rename failed", err);
     }
-  }
-};
+  }, [axiosPrivate, activeConversation]);
 
 
-  // _________________________________ UseEffect ____________________________________
+  // ── Regenerate last AI response ───────────────────────────────────────────
+  const handleRegenerateResponse = useCallback(async () => {
+    if (loadingResponse || !activeConversation) return;
+
+    const lastUserMsg = [...messages].reverse().find((m) => m.role === "user");
+    if (!lastUserMsg) return;
+
+    // Remove last AI message from view
+    setMessages((prev) => {
+      const lastAiIdx = [...prev.keys()].reverse().find((i) => prev[i].role === "assistant");
+      return lastAiIdx !== undefined ? prev.filter((_, i) => i !== lastAiIdx) : prev;
+    });
+
+    setLoadingResponse(true);
+    try {
+      const res = await axiosPrivate.post("/api/home/response", {
+        message: lastUserMsg.content,
+        conversationId: activeConversation._id,
+      });
+      setMessages((prev) => [...prev, { role: "assistant", content: res.data.answer, createdAt: new Date() }]);
+    } catch {
+      setMessages((prev) => [...prev, { role: "assistant", content: "Une erreur est survenue.", createdAt: new Date() }]);
+    } finally {
+      setLoadingResponse(false);
+    }
+  }, [messages, activeConversation, axiosPrivate, loadingResponse]);
+
+
+  // ── Delete conversation from state ────────────────────────────────────────
+  const removeConversationFromState = useCallback(async (conversationId) => {
+    const updated = conversations.filter((c) => c._id !== conversationId);
+    setConversations(updated);
+
+    if (activeConversation?._id === conversationId) {
+      const next = updated[0] || null;
+      setActiveConversation(next);
+      if (next) fetchMessages(next._id);
+      else { setMessages([]); handleNewConversation(); }
+    }
+  }, [conversations, activeConversation, fetchMessages, handleNewConversation]);
+
+
+  // ── Effects ───────────────────────────────────────────────────────────────
   useEffect(() => {
-    if (initialized && keycloak?.authenticated) {
-      fetchConversations();
-    }
+    if (initialized && keycloak?.authenticated) fetchConversations();
   }, [initialized, keycloak, fetchConversations]);
 
-  // Auto-launch first conversation
+  // Auto-open first conversation
   useEffect(() => {
-    if (!initialized || !keycloak?.authenticated || autoOpened) return;
-    if (loadingConversations) return;
-
-    if (conversations.length === 0) {
-      handleNewConversation();
-    } else {
-      handleSelectConversation(conversations[0]);
-    }
+    if (!initialized || !keycloak?.authenticated || autoOpened || loadingConversations) return;
+    if (conversations.length === 0) handleNewConversation();
+    else handleSelectConversation(conversations[0]);
     setAutoOpened(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialized, keycloak, conversations, loadingConversations, autoOpened]);
 
-  // Auto-scroll to bottom when messages update
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
 
-
-
-
- // _________________________________ return _______________________________
-
-  // Loading / Auth
-  if (!initialized) return <div className="flex items-center justify-center h-screen">Loading...</div>;
-  if (!keycloak?.authenticated)
+  // ── Guards ────────────────────────────────────────────────────────────────
+  if (!initialized) {
     return (
-      <div className="flex flex-col items-center justify-center h-screen gap-4">
-        <p>You must be logged in to access this page.</p>
-        <button onClick={() => keycloak.login()}>Login</button>
+      <div className="flex items-center justify-center h-screen bg-slate-50">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-10 h-10 border-3 border-slate-200 border-t-emerald-500 rounded-full animate-spin" />
+          <p className="text-slate-400 text-sm">Chargement…</p>
+        </div>
       </div>
     );
+  }
+
+  if (!keycloak?.authenticated) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen gap-4 bg-slate-50">
+        <p className="text-slate-600">Vous devez être connecté pour accéder à cette page.</p>
+        <button
+          onClick={() => keycloak.login()}
+          className="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-6 py-2.5 rounded-xl transition-colors"
+        >
+          Se connecter
+        </button>
+      </div>
+    );
+  }
 
 
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="flex h-screen">
+    <div className="flex h-screen overflow-hidden">
+      <ToastContainer />
+
       <Sidebar
         conversations={conversations}
         activeConversation={activeConversation}
         loadingConversations={loadingConversations}
         onSelectConversation={handleSelectConversation}
         onNewConversation={handleNewConversation}
+        onRenameConversation={handleRenameConversation}
         removeConversationFromState={removeConversationFromState}
         sidebarOpen={sidebarOpen}
         setSidebarOpen={setSidebarOpen}
         setOpenSpaceUser={setOpenSpaceUser}
         openSpaceUser={openSpaceUser}
       />
+
       <ChatWindow
         loadingResponse={loadingResponse}
         loadingMessages={loadingMessages}
@@ -228,12 +276,12 @@ export const Home = () => {
         newMessage={newMessage}
         setNewMessage={setNewMessage}
         onSendMessage={handleSendMessage}
-        messagesEndRef={messagesEndRef}
+        onRegenerateResponse={handleRegenerateResponse}
+        onStarterQuestion={handleStarterQuestion}
         setSidebarOpen={setSidebarOpen}
         setOpenSpaceUser={setOpenSpaceUser}
         openSpaceUser={openSpaceUser}
       />
     </div>
   );
-
 };
