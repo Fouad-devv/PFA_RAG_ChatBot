@@ -308,10 +308,10 @@ const MessageBubble = ({ m, idx, username, copiedId, onCopy, canRegenerate, onRe
         {isUser ? username?.charAt(0).toUpperCase() : "AI"}
       </div>
 
-      {/* Content column */}
-      <div className={`flex flex-col gap-1.5 max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl ${isUser ? "items-end" : "items-start"}`}>
+      {/* Content column — min-w-0 prevents flex overflow */}
+      <div className={`flex flex-col gap-1.5 min-w-0 max-w-[72%] ${isUser ? "items-end" : "items-start"}`}>
         {/* Bubble */}
-        <div className={`px-4 py-3 rounded-2xl break-words text-base leading-relaxed shadow-sm ${
+        <div className={`w-full px-4 py-3 rounded-2xl text-base leading-relaxed shadow-sm [overflow-wrap:anywhere] ${
           isUser
             ? "bg-slate-800 text-white rounded-br-none"
             : "bg-white text-slate-800 border border-slate-100 rounded-bl-none"
