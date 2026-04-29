@@ -64,7 +64,7 @@ export const Public = () => {
       <div className="flex-1 flex flex-col min-h-0">
 
         {/* Header */}
-        <header className="flex-shrink-0 flex items-center gap-3 px-5 py-4 bg-white border-b border-slate-100 shadow-sm">
+        <header className="flex-shrink-0 flex items-center gap-3 px-5 py-2.5 bg-[#edf0f5] border-b border-[#dde2ea]">
           <button
             onClick={() => setSidebarOpen(true)}
             className="lg:hidden p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors"

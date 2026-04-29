@@ -91,10 +91,10 @@ const ChatWindow = ({
     <div className="flex-1 flex flex-col bg-[#f5f7fa] min-h-screen relative overflow-hidden">
 
       {/* ── Header ── */}
-      <header className="flex-shrink-0 flex items-center gap-3 px-5 py-4 bg-white border-b border-slate-100 shadow-sm z-10">
+      <header className="flex-shrink-0 flex items-center gap-3 px-5 py-2.5 bg-[#edf0f5] border-b border-[#dde2ea] z-10">
         <button
           onClick={() => setSidebarOpen(true)}
-          className="lg:hidden p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors"
+          className="lg:hidden p-1.5 text-slate-400 hover:text-slate-700 hover:bg-[#dde2ea] rounded-xl transition-colors"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
