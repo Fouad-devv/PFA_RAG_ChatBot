@@ -1,9 +1,23 @@
-
-import { useState } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import dayjs from "dayjs";
+import relativeTime from "dayjs/plugin/relativeTime";
 import "../../index.css";
 import { useKeycloak } from "@react-keycloak/web";
 import useAxiosPrivate from "../../api/useAxiosPrivate";
+import { showToast } from "../../components/Toast";
+
+dayjs.extend(relativeTime);
+
+const getDateGroup = (date) => {
+  const d = dayjs(date);
+  const todayStart = dayjs().startOf("day");
+  if (d.isAfter(todayStart)) return "Aujourd'hui";
+  if (d.isAfter(todayStart.subtract(1, "day"))) return "Hier";
+  if (d.isAfter(todayStart.subtract(7, "day"))) return "Cette semaine";
+  return "Plus ancien";
+};
+
+const GROUP_ORDER = ["Aujourd'hui", "Hier", "Cette semaine", "Plus ancien"];
 
 const Sidebar = ({
   removeConversationFromState,
@@ -12,213 +26,344 @@ const Sidebar = ({
   loadingConversations,
   onSelectConversation,
   onNewConversation,
+  onRenameConversation,
   sidebarOpen,
   setSidebarOpen,
   setOpenSpaceUser,
   openSpaceUser,
 }) => {
-
   const { keycloak } = useKeycloak();
   const axiosPrivate = useAxiosPrivate();
   const [openMenuId, setOpenMenuId] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [renamingId, setRenamingId] = useState(null);
+  const [renameValue, setRenameValue] = useState("");
+  const renameInputRef = useRef(null);
   const username = keycloak.tokenParsed?.preferred_username || "User";
-  const email = keycloak.tokenParsed?.email || "No email";
+  const email = keycloak.tokenParsed?.email || "";
 
-  const handleLogout = () => {
-    keycloak.logout({
-      redirectUri: window.location.origin,
-    });
-  };
+  const handleLogout = () => keycloak.logout({ redirectUri: window.location.origin });
 
   const handleDeleteConversation = async (conversationId) => {
     try {
       await axiosPrivate.delete(`/api/home/conversations/${conversationId}`);
       setOpenMenuId(null);
       removeConversationFromState(conversationId);
-    } catch (error) {
-      console.error("Delete failed:", error);
+      showToast("Conversation supprimée");
+    } catch {
+      showToast("Échec de la suppression", "error");
     }
   };
 
+  const startRename = (c) => {
+    setRenamingId(c._id);
+    setRenameValue(c.title);
+    setOpenMenuId(null);
+    setTimeout(() => renameInputRef.current?.focus(), 60);
+  };
 
+  const commitRename = async () => {
+    if (!renameValue.trim() || !renamingId) { setRenamingId(null); return; }
+    await onRenameConversation(renamingId, renameValue.trim());
+    setRenamingId(null);
+  };
+
+  // Close context menu on outside click
+  useEffect(() => {
+    const close = () => setOpenMenuId(null);
+    document.addEventListener("click", close);
+    return () => document.removeEventListener("click", close);
+  }, []);
+
+  const filtered = useMemo(() => {
+    if (!searchQuery.trim()) return conversations;
+    return conversations.filter((c) =>
+      c.title.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [conversations, searchQuery]);
+
+  const groups = useMemo(() => {
+    const g = {};
+    filtered.forEach((c) => {
+      const key = getDateGroup(c.updatedAt);
+      if (!g[key]) g[key] = [];
+      g[key].push(c);
+    });
+    return g;
+  }, [filtered]);
 
   return (
     <>
-      <div
-        className={`fixed z-50 flex flex-col w-64 lg:w-72 bg-white text-slate-900 h-screen border-r border-slate-200 transition-transform transform shadow-lg
+      {/* Mobile overlay */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      <aside
+        className={`fixed z-50 flex flex-col w-72 bg-white h-screen border-r border-slate-200 transition-transform duration-300 shadow-2xl
           ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
-          lg:translate-x-0 lg:static lg:flex lg:shadow-none`}
-       >
-        {/*_________________________________________ Header _______________________________________________*/}
-        
-        <div className="px-6 py-5 border-b border-white flex justify-between items-center">
-          <div className="h-[38px]">
-            <h1 className="font-bold text-xl text-slate-900">Chats</h1>
-            <p className="text-xs text-slate-500">Manage your conversations</p>
+          lg:translate-x-0 lg:static lg:shadow-none`}
+      >
+        {/* ── Header ── */}
+        <div className="px-4 pt-5 pb-4 border-b border-slate-100">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2.5">
+              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center shadow-sm">
+                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-3 3-3-3z" />
+                </svg>
+              </div>
+              <span className="font-bold text-slate-900 tracking-tight">RAG Assistant</span>
+            </div>
+            <button
+              onClick={() => setSidebarOpen(false)}
+              className="lg:hidden p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
           </div>
 
-          {/* Close button for mobile */}
-          <button
-            onClick={() => setSidebarOpen(false)}
-            className="lg:hidden text-slate-500 hover:text-slate-700 transition-colors"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-
-        {/* New conversation button */}
-        <div className="px-4 py-4 border-b shadow-md border-slate-200">
           <button
             onClick={onNewConversation}
-            className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-semibold py-2.5 px-4 rounded-lg transition-all shadow-sm hover:shadow-md flex items-center justify-center gap-2"
+            className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-white font-semibold py-2.5 px-4 rounded-xl transition-all shadow-sm hover:shadow-md flex items-center justify-center gap-2 text-sm"
           >
-            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M12 5v14m7-7H5" stroke="currentColor" strokeWidth={2} strokeLinecap="round"/>
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
-            New Chat
+            Nouvelle conversation
           </button>
         </div>
 
-        {/*______________________________ Conversation list  __________________________________________*/}
+        {/* ── Search ── */}
+        <div className="px-3 py-3 border-b border-slate-100">
+          <div className="relative">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none"
+              fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <input
+              className="w-full pl-9 pr-8 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl placeholder-slate-400 text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent transition"
+              placeholder="Rechercher une conversation…"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
+          </div>
+        </div>
 
-        <div className="flex-1 overflow-y-auto custom-scrollbar px-3 py-3 space-y-2">
+        {/* ── Conversations list ── */}
+        <div className="flex-1 overflow-y-auto custom-scrollbar px-2 py-2">
           {loadingConversations ? (
-            <div className="p-4 text-center text-slate-400 text-sm">
-              <div className="flex justify-center mb-2">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-emerald-500"></div>
-              </div>
-              Loading conversations...
+            <div className="flex flex-col items-center justify-center py-16 gap-3">
+              <div className="animate-spin rounded-full h-7 w-7 border-b-2 border-emerald-500" />
+              <p className="text-sm text-slate-400">Chargement…</p>
             </div>
-          ) : conversations.length === 0 ? (
-            <div className="p-4 text-center text-slate-400 text-sm">
-              <p>No conversations yet.</p>
-              <p>Start a new chat!</p>
+          ) : filtered.length === 0 ? (
+            <div className="text-center py-16 px-3">
+              {searchQuery ? (
+                <>
+                  <svg className="w-10 h-10 text-slate-300 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                  <p className="text-sm text-slate-500 font-medium">Aucun résultat</p>
+                  <p className="text-xs text-slate-400 mt-1">pour « {searchQuery} »</p>
+                </>
+              ) : (
+                <>
+                  <svg className="w-10 h-10 text-slate-300 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+                      d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                  </svg>
+                  <p className="text-sm text-slate-500 font-medium">Aucune conversation</p>
+                  <p className="text-xs text-slate-400 mt-1">Démarrez un nouveau chat !</p>
+                </>
+              )}
             </div>
           ) : (
-            <div className="flex flex-col gap-1">
-              {conversations.map((c) => (
-                <div
-                  key={c._id}
-                  onClick={() => {
-                    onSelectConversation(c);
-                    setSidebarOpen(false);
-                  }}
-                  className={`relative px-3 py-3 border rounded-lg cursor-pointer transition-all group ${
-                    activeConversation?._id === c._id
-                      ? "bg-emerald-50 border-emerald-200 shadow-sm"
-                      : "border-gray-100 hover:bg-slate-100 hover:scale-102"
-                  }`}
-                >
-                  {/* Content */}
-                  <div className="flex justify-between items-start gap-2">
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-medium text-md text-slate-900 truncate group-hover:text-emerald-600 transition-colors">{c.title}</h4>
-                      <span className="text-xs text-slate-400 mt-1.5 block">
-                        {dayjs(c.updatedAt).fromNow()}
-                      </span>
-                    </div>
-
-                    {/* Three-dot menu */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setOpenMenuId(openMenuId === c._id ? null : c._id);
-                      }}
-                      className="text-slate-400 hover:text-slate-600 transition-colors p-1 rounded opacity-0 group-hover:opacity-100"
-                    >
-                      <svg className="w-5 h-5 mt-2" fill="currentColor" viewBox="0 0 24 24">
-                        <circle cx="12" cy="5" r="2"/>
-                        <circle cx="12" cy="12" r="2"/>
-                        <circle cx="12" cy="19" r="2"/>
-                      </svg>
-                    </button>
-                  </div>
-
-                  {/* Dropdown menu */}
-                  {openMenuId === c._id && (
-                    <div
-                      onClick={(e) => e.stopPropagation()}
-                      className="z-10 absolute right-10 top-1 bg-white border border-slate-200 rounded-lg shadow-lg w-32 overflow-hidden"
-                     >
-                      <button
-                        onClick={() => handleDeleteConversation(c._id)}
-                        className="w-full text-left px-3 py-2.5 text-sm font-bold text-red-600 hover:bg-red-50 border border-gray-200 transition-colors flex items-center gap-2"
-                      >
-                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M19 6.4L17.6 5 12 10.6 6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4z"/>
-                        </svg>
-                        Delete
-                      </button>
-                    </div>
-                  )}
+            GROUP_ORDER.filter((g) => groups[g]?.length > 0).map((groupName) => (
+              <div key={groupName} className="mb-4">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-2 mb-1.5">
+                  {groupName}
+                </p>
+                <div className="flex flex-col gap-0.5">
+                  {groups[groupName].map((c) => (
+                    <ConversationItem
+                      key={c._id}
+                      c={c}
+                      isActive={activeConversation?._id === c._id}
+                      isRenaming={renamingId === c._id}
+                      renameValue={renameValue}
+                      renameInputRef={renameInputRef}
+                      openMenuId={openMenuId}
+                      setOpenMenuId={setOpenMenuId}
+                      setRenameValue={setRenameValue}
+                      onSelect={() => { onSelectConversation(c); setSidebarOpen(false); }}
+                      onStartRename={() => startRename(c)}
+                      onCommitRename={commitRename}
+                      onCancelRename={() => setRenamingId(null)}
+                      onDelete={() => handleDeleteConversation(c._id)}
+                    />
+                  ))}
                 </div>
-              ))}
-            </div>
+              </div>
+            ))
           )}
         </div>
 
-        {/*______________________________________________ User Space ____________________________________*/}
-
-        {/* User space hidden expanded */}
-        <div
-          className={`transform transition-all duration-400 ease-in-out overflow-hidden
-            ${openSpaceUser ? "h-auto opacity-100" : "opacity-0 h-2"} 
-             border rounded-xl border-gray-400 bg-white mx-2`}
-         >
-          <div className="rounded-lg bg-gradient-to-r from-green-800 to-emerald-700 p-4 space-y-3 border border-slate-200">
-            <div>
-              <p className="text-xs uppercase tracking-wide text-slate-100 font-bold">Logged in as</p>
-              <p className="font-bold text-black truncate mt-1">{username}</p>
+        {/* ── User panel (expandable) ── */}
+        {openSpaceUser && (
+          <div className="mx-2 mb-2 rounded-xl overflow-hidden border border-slate-200 animate-fade-in">
+            <div className="bg-gradient-to-br from-slate-800 to-slate-900 p-4 space-y-3">
+              <div>
+                <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold mb-1">Connecté en tant que</p>
+                <p className="text-sm font-bold text-white truncate">{username}</p>
+                <p className="text-xs text-slate-400 truncate mt-0.5">{email || "—"}</p>
+              </div>
+              <button
+                onClick={handleLogout}
+                className="w-full bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 text-sm font-medium py-2 px-3 rounded-lg transition-colors flex items-center justify-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+                Déconnexion
+              </button>
             </div>
-            <div className="pt-2 border-t border-slate-200">
-              <p className="text-xs text-slate-200 truncate">{email}</p>
-            </div>
-            <button
-              onClick={handleLogout}
-              className="w-full bg-red-50 hover:bg-red-100 text-red-600 hover:text-red-700 font-medium py-2.5 px-3 text-sm rounded-lg transition-colors flex items-center justify-center gap-2 mt-3"
-            >
-              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/>
-              </svg>
-              Logout
-            </button>
           </div>
-        </div>
+        )}
 
-        {/* User profile button */}
-        <div className="px-2 py-3 border-t shadow-lg border-gray-200 bg-white">
+        {/* ── User profile button ── */}
+        <div className="px-2 py-3 border-t border-slate-100">
           <button
-            onClick={() => setOpenSpaceUser(openSpaceUser === null ? username : null)}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all ${
-              openSpaceUser
-                ? "bg-emerald-50 border border-emerald-200"
-                : "hover:bg-slate-100 border border-transparent"
+            onClick={() => setOpenSpaceUser(openSpaceUser ? null : username)}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${
+              openSpaceUser ? "bg-slate-100 border border-slate-200" : "hover:bg-slate-50 border border-transparent"
             }`}
           >
-            {/* Avatar circle */}
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-white font-semibold text-sm flex-shrink-0">
+            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0 shadow-sm">
               {username?.charAt(0).toUpperCase()}
             </div>
-            {/* Name */}
             <div className="flex-1 min-w-0 text-left">
-              <p className="text-sm font-medium text-slate-900 truncate">{username}</p>
-              <p className="text-xs text-slate-500 truncate">{email}</p>
+              <p className="text-sm font-semibold text-slate-900 truncate">{username}</p>
+              <p className="text-xs text-slate-400 truncate">{email || "Connecté"}</p>
             </div>
             <svg
-              className={`w-4 h-4 text-slate-400 transition-transform ${openSpaceUser ? "rotate-180" : ""}`}
-              fill="currentColor"
-              viewBox="0 0 24 24"
+              className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${openSpaceUser ? "rotate-180" : ""}`}
+              fill="currentColor" viewBox="0 0 24 24"
             >
-              <path d="M7 10l5 5 5-5z"/>
+              <path d="M7 10l5 5 5-5z" />
             </svg>
           </button>
         </div>
-
-      </div>
+      </aside>
     </>
   );
 };
+
+const ConversationItem = ({
+  c, isActive, isRenaming, renameValue, renameInputRef, openMenuId, setOpenMenuId,
+  setRenameValue, onSelect, onStartRename, onCommitRename, onCancelRename, onDelete,
+}) => (
+  <div
+    onClick={() => { if (!isRenaming) onSelect(); }}
+    className={`relative px-3 py-2.5 rounded-xl cursor-pointer transition-all group ${
+      isActive
+        ? "bg-emerald-50 border border-emerald-200 shadow-sm"
+        : "hover:bg-slate-50 border border-transparent"
+    }`}
+  >
+    <div className="flex items-center gap-2 pr-7 min-w-0">
+      <svg
+        className={`w-4 h-4 flex-shrink-0 transition-colors ${isActive ? "text-emerald-500" : "text-slate-400"}`}
+        fill="none" stroke="currentColor" viewBox="0 0 24 24"
+      >
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+          d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+      </svg>
+
+      {isRenaming ? (
+        <input
+          ref={renameInputRef}
+          className="flex-1 text-sm bg-white border border-emerald-400 rounded-lg px-2 py-0.5 outline-none text-slate-900 ring-1 ring-emerald-300 min-w-0"
+          value={renameValue}
+          onChange={(e) => setRenameValue(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") onCommitRename();
+            if (e.key === "Escape") onCancelRename();
+          }}
+          onBlur={onCommitRename}
+          onClick={(e) => e.stopPropagation()}
+        />
+      ) : (
+        <div className="min-w-0 flex-1">
+          <p className={`text-sm truncate font-medium transition-colors ${isActive ? "text-emerald-700" : "text-slate-700 group-hover:text-slate-900"}`}>
+            {c.title}
+          </p>
+          <p className="text-xs text-slate-400 mt-0.5 truncate">
+            {dayjs(c.updatedAt).fromNow()}
+          </p>
+        </div>
+      )}
+    </div>
+
+    {/* Three-dot button */}
+    {!isRenaming && (
+      <button
+        onClick={(e) => { e.stopPropagation(); setOpenMenuId(openMenuId === c._id ? null : c._id); }}
+        className="absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 flex items-center justify-center text-slate-400 hover:text-slate-700 rounded-md hover:bg-slate-200 opacity-0 group-hover:opacity-100 transition-all"
+      >
+        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+          <circle cx="12" cy="5" r="1.5" /><circle cx="12" cy="12" r="1.5" /><circle cx="12" cy="19" r="1.5" />
+        </svg>
+      </button>
+    )}
+
+    {/* Dropdown */}
+    {openMenuId === c._id && (
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="absolute right-2 top-9 z-30 bg-white border border-slate-200 rounded-xl shadow-xl w-38 overflow-hidden py-1"
+      >
+        <button
+          onClick={onStartRename}
+          className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2.5 transition-colors"
+        >
+          <svg className="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+          </svg>
+          Renommer
+        </button>
+        <div className="h-px bg-slate-100 mx-2" />
+        <button
+          onClick={onDelete}
+          className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2.5 transition-colors"
+        >
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+          </svg>
+          Supprimer
+        </button>
+      </div>
+    )}
+  </div>
+);
 
 export default Sidebar;
