@@ -88,13 +88,13 @@ const ChatWindow = ({
   const canRegenerate = !loadingResponse && lastAiIndex !== undefined && lastUserIndex !== undefined;
 
   return (
-    <div className="flex-1 flex flex-col bg-[#f5f7fa] min-h-screen relative overflow-hidden">
+    <div className="flex-1 flex flex-col bg-white min-h-screen relative overflow-hidden">
 
       {/* ── Header ── */}
-      <header className="flex-shrink-0 flex items-center gap-3 px-5 py-2.5 bg-[#edf0f5] border-b border-[#dde2ea] z-10">
+      <header className="flex-shrink-0 flex items-center gap-3 px-5 py-2.5 bg-slate-50 border-b border-black/10 z-10">
         <button
           onClick={() => setSidebarOpen(true)}
-          className="lg:hidden p-1.5 text-slate-400 hover:text-slate-700 hover:bg-[#dde2ea] rounded-xl transition-colors"
+          className="lg:hidden p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
@@ -131,7 +131,7 @@ const ChatWindow = ({
         ref={chatContainerRef}
         onScroll={handleScroll}
         onClick={handleAreaClick}
-        className="flex-1 overflow-y-auto custom-scrollbar px-4 md:px-10 lg:px-20 xl:px-36 py-8 space-y-5"
+        className="flex-1 overflow-y-auto custom-scrollbar bg-slate-50 px-4 md:px-10 lg:px-20 xl:px-36 py-8 space-y-5"
       >
         {!activeConversation ? (
           /* Welcome screen */
@@ -232,7 +232,7 @@ const ChatWindow = ({
 
       {/* ── Input ── */}
       {activeConversation && (
-        <div className="flex-shrink-0 px-4 md:px-10 lg:px-20 xl:px-36 py-4 bg-[#f5f7fa]">
+        <div className="flex-shrink-0 px-4 md:px-10 lg:px-20 xl:px-36 py-4 bg-slate-50">
           <div className="input-card flex items-end gap-3 px-4 py-3">
             <textarea
               ref={textareaRef}
@@ -286,7 +286,7 @@ const Bubble = ({ m, idx, username, copiedId, onCopy, canRegenerate, onRegenerat
       {/* Avatar */}
       <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-sm ${
         isUser
-          ? "bg-gradient-to-br from-slate-700 to-slate-900"
+          ? "bg-gradient-to-br from-green-600 to-slate-900"
           : "bg-gradient-to-br from-emerald-400 to-emerald-600 shadow-emerald-100"
       }`}>
         {isUser ? username?.charAt(0).toUpperCase() : "AI"}
