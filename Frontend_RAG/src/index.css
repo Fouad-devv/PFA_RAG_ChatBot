@@ -1,226 +1,151 @@
 @import "tailwindcss";
 
-/* Hide scrollbar but allow scrolling */
-.custom-scrollbar {
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;     /* Firefox */
+/* ─── Scrollbars ─────────────────────────────────────────────────────────── */
+.custom-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.custom-scrollbar::-webkit-scrollbar { display: none; }
+
+textarea::-webkit-scrollbar { width: 6px; }
+textarea::-webkit-scrollbar-track { background: transparent; margin: 8px 0; }
+textarea::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 9999px; }
+textarea::-webkit-scrollbar-thumb:hover { background-color: #94a3b8; }
+textarea { scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent; }
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(51,65,85,0.2); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(51,65,85,0.4); }
+
+/* ─── Landing background effects ────────────────────────────────────────── */
+.bg-dot-grid {
+  background-image: radial-gradient(circle, rgba(255,255,255,0.055) 1px, transparent 1px);
+  background-size: 30px 30px;
 }
 
-.custom-scrollbar::-webkit-scrollbar {
-  display: none;             /* Chrome, Safari, Opera */
+.bg-dot-grid-light {
+  background-image: radial-gradient(circle, rgba(0,0,0,0.04) 1px, transparent 1px);
+  background-size: 28px 28px;
 }
 
-/* Thin scrollbar */
-textarea::-webkit-scrollbar {
-  width: 6px;
+/* ─── Orb float animations ───────────────────────────────────────────────── */
+@keyframes orb-drift-1 {
+  0%, 100% { transform: translate(0px, 0px) scale(1); }
+  33%       { transform: translate(50px, -60px) scale(1.06); }
+  66%       { transform: translate(-30px, 30px) scale(0.97); }
+}
+@keyframes orb-drift-2 {
+  0%, 100% { transform: translate(0px, 0px) scale(1); }
+  33%       { transform: translate(-60px, 40px) scale(1.04); }
+  66%       { transform: translate(40px, -30px) scale(0.96); }
+}
+@keyframes orb-drift-3 {
+  0%, 100% { transform: translate(0px, 0px); }
+  50%       { transform: translate(20px, -20px); }
 }
 
-textarea::-webkit-scrollbar-track {
-  background: transparent;
-  margin: 8px 0; /* adds top & bottom spacing */
-}
+.animate-orb-1 { animation: orb-drift-1 22s ease-in-out infinite; }
+.animate-orb-2 { animation: orb-drift-2 28s ease-in-out infinite; }
+.animate-orb-3 { animation: orb-drift-3 18s ease-in-out infinite; }
 
-textarea::-webkit-scrollbar-thumb {
-  background-color: #cbd5e1; /* gray-300 */
-  border-radius: 9999px;
-}
-
-textarea::-webkit-scrollbar-thumb:hover {
-  background-color: #94a3b8; /* gray-400 */
-}
-
-/* Firefox */
-textarea {
-  scrollbar-width: thin;
-  scrollbar-color: #cbd5e1 transparent;
-}
-
-/* Professional animations */
-@keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-        .spinner {
-          animation: spin 1s linear infinite;
-        }
-
+/* ─── Entrance animations ────────────────────────────────────────────────── */
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
-
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
 @keyframes slideInRight {
-  from {
-    opacity: 0;
-    transform: translateX(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
+  from { opacity: 0; transform: translateX(20px); }
+  to   { opacity: 1; transform: translateX(0); }
 }
-
 @keyframes slideInLeft {
-  from {
-    opacity: 0;
-    transform: translateX(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
+  from { opacity: 0; transform: translateX(-20px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to   { opacity: 1; transform: scale(1); }
 }
 
+.animate-fade-in       { animation: fadeIn 0.3s ease-out both; }
+.animate-fade-in-up    { animation: fadeInUp 0.5s ease-out both; }
+.animate-slide-in-right{ animation: slideInRight 0.3s ease-out both; }
+.animate-slide-in-left { animation: slideInLeft 0.3s ease-out both; }
+.animate-scale-in      { animation: scaleIn 0.2s ease-out both; }
+
+/* Staggered delays */
+.delay-100 { animation-delay: 100ms; }
+.delay-200 { animation-delay: 200ms; }
+.delay-300 { animation-delay: 300ms; }
+
+/* ─── Pulse / typing dots ────────────────────────────────────────────────── */
 @keyframes pulse-subtle {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.7;
-  }
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.6; }
 }
+.animate-pulse-subtle { animation: pulse-subtle 2s ease-in-out infinite; }
 
-.animate-fade-in {
-  animation: fadeIn 0.3s ease-in-out;
-}
-
-.animate-slide-in-right {
-  animation: slideInRight 0.3s ease-in-out;
-}
-
-.animate-slide-in-left {
-  animation: slideInLeft 0.3s ease-in-out;
-}
-
-.animate-pulse-subtle {
-  animation: pulse-subtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
-
-/* Smooth transitions for all interactive elements */
-body {
-  @apply transition-colors duration-200;
-}
-
-button {
-  @apply transition-all duration-200;
-}
-
-input, textarea {
-  @apply transition-all duration-200;
-}
-
-/* Focus ring customization */
-:focus-visible {
-  @apply outline-none ring-2 ring-emerald-500 ring-offset-2;
-}
-
-/* Scrollbar styling for webkit browsers */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: rgba(51, 65, 85, 0.3);
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(51, 65, 85, 0.5);
-}
-
-/* Message bubble styles */
-.message-bubble {
-  @apply rounded-2xl px-4 py-3 break-words shadow-sm transition-all hover:shadow-md;
-}
-
-.message-bubble-user {
-  @apply bg-gradient-to-br from-emerald-500 to-emerald-600 text-white rounded-br-none;
-}
-
-.message-bubble-assistant {
-  @apply bg-white text-slate-900 border border-slate-200 rounded-bl-none;
-}
-
-/* Loading spinner animation */
+/* ─── Spinner ─────────────────────────────────────────────────────────────── */
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 .spinner {
-  border: 3px solid rgba(15, 23, 42, 0.1);
+  border: 2.5px solid rgba(16,185,129,0.15);
+  border-top-color: rgb(16,185,129);
   border-radius: 50%;
-  border-top: 3px solid rgb(16, 185, 129);
-  width: 24px;
-  height: 24px;
-  animation: spin 1s linear infinite;
+  animation: spin 0.8s linear infinite;
 }
 
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+/* ─── Glass surfaces ─────────────────────────────────────────────────────── */
+.glass-dark {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+.glass-light {
+  background: rgba(255,255,255,0.85);
+  border: 1px solid rgba(255,255,255,0.9);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
-/* Smooth gradient backgrounds */
-.bg-gradient-smooth {
-  @apply bg-gradient-to-br from-slate-50 to-slate-100;
+/* ─── Glow utilities ─────────────────────────────────────────────────────── */
+.glow-emerald {
+  box-shadow: 0 0 30px rgba(16,185,129,0.25), 0 0 60px rgba(16,185,129,0.12);
+}
+.glow-emerald-sm {
+  box-shadow: 0 0 15px rgba(16,185,129,0.2);
 }
 
-/* Professional button styles */
-.btn-primary {
-  @apply bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-semibold py-2.5 px-4 rounded-lg transition-all shadow-sm hover:shadow-md;
+/* ─── Message bubbles ────────────────────────────────────────────────────── */
+.bubble-user {
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  color: #f8fafc;
+}
+.bubble-ai {
+  background: #ffffff;
+  color: #1e293b;
+  border: 1px solid #f1f5f9;
+  box-shadow: 0 1px 8px rgba(0,0,0,0.06);
 }
 
-.btn-secondary {
-  @apply bg-slate-100 hover:bg-slate-200 text-slate-900 font-medium py-2.5 px-4 rounded-lg transition-all;
+/* ─── Sidebar conversation item active ───────────────────────────────────── */
+.conv-item-active {
+  background: linear-gradient(135deg, #f0fdf4, #ecfdf5);
+  border-color: #a7f3d0;
 }
 
-.btn-danger {
-  @apply bg-red-50 hover:bg-red-100 text-red-600 hover:text-red-700 font-medium transition-all;
+/* ─── Input floating card ────────────────────────────────────────────────── */
+.input-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.04);
+  border-radius: 20px;
 }
 
-/* Input field styles */
-.input-field {
-  @apply bg-slate-50 border border-slate-300 text-base rounded-lg px-4 py-2.5 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition;
-}
+/* ─── Focus ring override ────────────────────────────────────────────────── */
+:focus-visible { outline: none; }
 
-/* Card styles */
-.card {
-  @apply bg-white rounded-lg border border-slate-200 shadow-sm hover:shadow-md transition-shadow;
-}
-
-/* Badge styles */
-.badge {
-  @apply inline-block px-3 py-1 rounded-full text-xs font-semibold;
-}
-
-.badge-success {
-  @apply bg-emerald-100 text-emerald-700;
-}
-
-.badge-warning {
-  @apply bg-yellow-100 text-yellow-700;
-}
-
-.badge-error {
-  @apply bg-red-100 text-red-700;
-}
-
-/* Responsive typography */
-@screen sm {
-  h1 { @apply text-2xl; }
-  h2 { @apply text-xl; }
-  h3 { @apply text-lg; }
-}
-
-@screen md {
-  h1 { @apply text-3xl; }
-  h2 { @apply text-2xl; }
-  h3 { @apply text-xl; }
-}
+/* ─── Transitions ────────────────────────────────────────────────────────── */
+button { transition: all 0.18s ease; }
+input, textarea { transition: border-color 0.18s ease, box-shadow 0.18s ease; }
