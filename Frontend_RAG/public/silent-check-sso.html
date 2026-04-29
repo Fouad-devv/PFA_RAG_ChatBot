@@ -1,0 +1,9 @@
+<!DOCTYPE html>
+<html>
+  <body>
+    <script>
+      // Sends the current URL back to the parent window
+      parent.postMessage(location.href, location.origin);
+    </script>
+  </body>
+</html>
