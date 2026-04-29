@@ -18,6 +18,7 @@ export const Home = () => {
   const [loadingResponse, setLoadingResponse] = useState(false);
   const [autoOpened, setAutoOpened] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [openSpaceUser, setOpenSpaceUser] = useState(null);
 
   const username = keycloak.tokenParsed?.preferred_username || "User";
@@ -264,6 +265,8 @@ export const Home = () => {
         removeConversationFromState={removeConversationFromState}
         sidebarOpen={sidebarOpen}
         setSidebarOpen={setSidebarOpen}
+        sidebarCollapsed={sidebarCollapsed}
+        setSidebarCollapsed={setSidebarCollapsed}
         setOpenSpaceUser={setOpenSpaceUser}
         openSpaceUser={openSpaceUser}
       />

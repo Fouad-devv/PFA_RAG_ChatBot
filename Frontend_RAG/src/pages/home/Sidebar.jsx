@@ -27,6 +27,8 @@ const Sidebar = ({
   onRenameConversation,
   sidebarOpen,
   setSidebarOpen,
+  sidebarCollapsed,
+  setSidebarCollapsed,
   setOpenSpaceUser,
   openSpaceUser,
 }) => {
@@ -92,9 +94,35 @@ const Sidebar = ({
         <div className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm lg:hidden" onClick={() => setSidebarOpen(false)} />
       )}
 
-      <aside className={`fixed z-50 flex flex-col w-72 h-screen bg-white border-r border-slate-100 transition-transform duration-300 shadow-2xl shadow-slate-200/60
+      {/* ── Desktop collapse toggle button ── */}
+      <button
+        onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+        title={sidebarCollapsed ? "Afficher le menu" : "Masquer le menu"}
+        className={`hidden lg:flex fixed top-1/2 -translate-y-1/2 z-[60]
+          items-center justify-center
+          w-5 h-10 bg-white border border-slate-200 border-l-0
+          rounded-r-xl shadow-md
+          hover:bg-emerald-50 hover:border-emerald-300 hover:shadow-lg
+          transition-all duration-300 ease-in-out
+          ${sidebarCollapsed ? "left-0" : "left-72"}`}
+      >
+        <svg
+          className="w-3 h-3 text-slate-400 group-hover:text-emerald-600"
+          fill="none" stroke="currentColor" viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5}
+            d={sidebarCollapsed ? "M9 5l7 7-7 7" : "M15 19l-7-7 7-7"}
+          />
+        </svg>
+      </button>
+
+      <aside className={`fixed z-50 flex flex-col w-72 h-screen bg-white border-r border-slate-100 shadow-2xl shadow-slate-200/60
+        transition-transform duration-300
         ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
-        lg:translate-x-0 lg:static lg:shadow-none`}
+        lg:translate-x-0 lg:static lg:shadow-none
+        ${sidebarCollapsed ? "lg:w-0 lg:overflow-hidden lg:border-r-0" : "lg:w-72"}
+        lg:transition-[width] lg:duration-300`}
       >
         {/* ── Header ── */}
         <div className="px-4 pt-5 pb-4 border-b border-slate-100">
