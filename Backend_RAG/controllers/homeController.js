@@ -278,3 +278,33 @@ export const handleDeleteConversation = async (req, res) => {
   };
 
 }
+
+
+// ____________________________ Rename a conversation ____________________________
+export const handleRenameConversation = async (req, res) => {
+  try {
+    const userId = req.userId;
+    const { conversationId } = req.params;
+    const { title } = req.body;
+
+    if (!title || title.trim().length === 0) {
+      return res.status(400).json({ error: "Title is required" });
+    }
+
+    const foundUser = await User.findOne({ userId });
+    if (!foundUser) return res.status(404).json({ error: "User not found" });
+
+    const conversation = await Conversation.findOneAndUpdate(
+      { _id: conversationId, userId: foundUser._id },
+      { title: title.trim().substring(0, 60) },
+      { new: true }
+    );
+
+    if (!conversation) return res.status(404).json({ error: "Conversation not found" });
+
+    return res.json({ _id: conversation._id, title: conversation.title });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+};
