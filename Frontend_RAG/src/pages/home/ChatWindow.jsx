@@ -37,12 +37,17 @@ const ChatWindow = ({
   const [showScrollBtn, setShowScrollBtn] = useState(false);
   const [copiedId, setCopiedId]           = useState(null);
 
+  // Scroll to bottom instantly when a conversation finishes loading
   useEffect(() => {
-    const el = chatContainerRef.current;
-    if (!el) return;
-    if (el.scrollHeight - el.scrollTop - el.clientHeight < 150) {
+    if (!loadingMessages) {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }
+  }, [loadingMessages]);
+
+  // Scroll to bottom smoothly when a new message arrives
+  useEffect(() => {
+    if (messages.length === 0) return;
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   const handleScroll = useCallback(() => {

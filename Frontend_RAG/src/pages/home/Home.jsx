@@ -99,9 +99,7 @@ export const Home = () => {
         conversationId: activeConversation._id,
       });
 
-      const aiMsg = { role: "assistant", content: res.data.answer, createdAt: new Date() };
-      setMessages((prev) => [...prev, aiMsg]);
-
+      setMessages((prev) => [...prev, { role: "assistant", content: res.data.answer, createdAt: new Date() }]);
       setConversations((prev) =>
         prev.map((c) =>
           c._id === activeConversation._id
@@ -109,11 +107,7 @@ export const Home = () => {
             : c
         )
       );
-      setActiveConversation((prev) => ({
-        ...prev,
-        title: res.data.title || prev.title,
-        lastMessagePreview: res.data.answer,
-      }));
+      setActiveConversation((prev) => ({ ...prev, title: res.data.title || prev.title }));
     } catch (err) {
       console.error("Failed to send message", err);
     } finally {
@@ -123,30 +117,28 @@ export const Home = () => {
 
 
   // ── Starter question shortcut ─────────────────────────────────────────────
-  const handleStarterQuestion = useCallback((question) => {
-    setNewMessage(question);
-    setTimeout(() => {
-      // trigger send with the question directly
-      if (!activeConversation || loadingResponse) return;
-      const userMsg = { role: "user", content: question, createdAt: new Date() };
-      setMessages((prev) => [...prev, userMsg]);
-      setLoadingResponse(true);
-      axiosPrivate
-        .post("/api/home/response", { message: question, conversationId: activeConversation._id })
-        .then((res) => {
-          setMessages((prev) => [...prev, { role: "assistant", content: res.data.answer, createdAt: new Date() }]);
-          setConversations((prev) =>
-            prev.map((c) =>
-              c._id === activeConversation._id
-                ? { ...c, title: res.data.title, lastMessagePreview: res.data.answer, updatedAt: new Date() }
-                : c
-            )
-          );
-          setActiveConversation((prev) => ({ ...prev, title: res.data.title || prev.title }));
-        })
-        .catch(() => {})
-        .finally(() => { setLoadingResponse(false); setNewMessage(""); });
-    }, 0);
+  const handleStarterQuestion = useCallback(async (question) => {
+    if (!activeConversation || loadingResponse) return;
+    setMessages((prev) => [...prev, { role: "user", content: question, createdAt: new Date() }]);
+    setLoadingResponse(true);
+    try {
+      const res = await axiosPrivate.post("/api/home/response", {
+        message: question,
+        conversationId: activeConversation._id,
+      });
+      setMessages((prev) => [...prev, { role: "assistant", content: res.data.answer, createdAt: new Date() }]);
+      setConversations((prev) =>
+        prev.map((c) =>
+          c._id === activeConversation._id
+            ? { ...c, title: res.data.title, lastMessagePreview: res.data.answer, updatedAt: new Date() }
+            : c
+        )
+      );
+      setActiveConversation((prev) => ({ ...prev, title: res.data.title || prev.title }));
+    } catch {
+    } finally {
+      setLoadingResponse(false);
+    }
   }, [activeConversation, axiosPrivate, loadingResponse]);
 
 
@@ -173,7 +165,6 @@ export const Home = () => {
     const lastUserMsg = [...messages].reverse().find((m) => m.role === "user");
     if (!lastUserMsg) return;
 
-    // Remove last AI message from view
     setMessages((prev) => {
       const lastAiIdx = [...prev.keys()].reverse().find((i) => prev[i].role === "assistant");
       return lastAiIdx !== undefined ? prev.filter((_, i) => i !== lastAiIdx) : prev;
@@ -213,7 +204,6 @@ export const Home = () => {
     if (initialized && keycloak?.authenticated) fetchConversations();
   }, [initialized, keycloak, fetchConversations]);
 
-  // Auto-open first conversation
   useEffect(() => {
     if (!initialized || !keycloak?.authenticated || autoOpened || loadingConversations) return;
     if (conversations.length === 0) handleNewConversation();
