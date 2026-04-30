@@ -137,7 +137,7 @@
           </div>
           </#if>
 
-          <input type="hidden" name="${csrf.paramName}" value="${csrf.token}"/>
+          <#if csrf??><input type="hidden" name="${csrf.paramName}" value="${csrf.token}"/></#if>
 
           <!-- Submit -->
           <button class="btn-primary" type="submit">Créer mon compte</button>

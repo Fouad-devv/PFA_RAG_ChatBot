@@ -15,12 +15,12 @@ services:
 
   # ── Keycloak ──────────────────────────────────────────────────────────────
   keycloak:
-    image: quay.io/keycloak/keycloak:24.0
+    image: quay.io/keycloak/keycloak:latest
     restart: unless-stopped
     command: start-dev
     environment:
-      KEYCLOAK_ADMIN: admin
-      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
       KC_DB: postgres
       KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
       KC_DB_USERNAME: keycloak
@@ -56,6 +56,9 @@ services:
       - ./Backend_RAG/.env
     environment:
       FASTAPI_URL: http://fastapi:8000
+      KEYCLOAK_URL: http://keycloak:8081/
+      KEYCLOAK_REALM: RealmPFE
+      KEYCLOAK_CLIENT_ID: ClientPFE
     ports:
       - "5000:5000"
     depends_on:

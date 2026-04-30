@@ -44,12 +44,12 @@
             <input
               id="username"
               name="username"
-              type="text"
+              type="<#if realm.registrationEmailAsUsername>email<#else>text</#if>"
               class="form-control <#if messagesPerField.existsError('username','password')>error</#if>"
               value="${(login.username!'')}"
               autofocus
-              autocomplete="username"
-              placeholder="Votre nom d'utilisateur"
+              autocomplete="<#if realm.registrationEmailAsUsername>email<#else>username</#if>"
+              placeholder="<#if realm.registrationEmailAsUsername>votre@email.com<#else>Votre nom d'utilisateur</#if>"
             />
             <#if messagesPerField.existsError('username')>
               <div class="field-error">${kcSanitize(messagesPerField.get('username'))?no_esc}</div>
@@ -89,7 +89,7 @@
           </div>
 
           <!-- Submit -->
-          <input type="hidden" name="${csrf.paramName}" value="${csrf.token}"/>
+          <#if csrf??><input type="hidden" name="${csrf.paramName}" value="${csrf.token}"/></#if>
           <button class="btn-primary" type="submit">Se connecter</button>
         </form>
 

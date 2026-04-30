@@ -65,7 +65,7 @@ export const handGetResponse = async (req, res) => {
     // Call FastAPI RAG service
     let answer;
     try {
-      const ragRes = await fetch("${process.env.FASTAPI_URL || "http://localhost:8000"}/rag", {
+      const ragRes = await fetch(`${process.env.FASTAPI_URL || "http://localhost:8000"}/rag`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ question: message }),

@@ -10,14 +10,9 @@ import { connectDB } from './config/mongoConn.js';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import { attachUserId } from './Middleware/attachUserId.js';
+import { verifyToken } from './Middleware/verifyToken.js';
 
-
-// Keycloak
-import session from 'express-session';
-import { keycloak, memoryStore } from './config/keycloak.js';
-
-
-//importing protected routes
+//importing routes
 import homeRoute from './routers/homeRoute.js';
 import publicRoute from './routers/publicRoute.js';
 
@@ -26,35 +21,19 @@ import publicRoute from './routers/publicRoute.js';
 connectDB();
 
 const app = express();
-const PORT = process.env.PORT ;
+const PORT = process.env.PORT;
 
-app.use(cors({ origin: 'http://localhost:5173', credentials: true, }));  // My front-end
+app.use(cors({ origin: 'http://localhost:5173', credentials: true }));
 app.use(express.json());
-app.use(express.urlencoded({extended:true}));
+app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
-
-// Session for Keycloak
-app.use(
-  session({
-    secret: 'some-secret',
-    resave: false,
-    saveUninitialized: true,
-    store: memoryStore,
-  })
-);
-// Keycloak middleware
-app.use(keycloak.middleware());
-
-
 
 //_______________________________________________________________
 
-app.use('/api/public' , publicRoute);
+app.use('/api/public', publicRoute);
 
-app.use(keycloak.protect(), attachUserId);
-// routes
-app.use('/api/home' , homeRoute);
-//app.use('/api/orders/admin', keycloak.protect('realm:admin'), adminOrderRoute);
+app.use(verifyToken, attachUserId);
+app.use('/api/home', homeRoute);
 
 
 

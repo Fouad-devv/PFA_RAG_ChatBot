@@ -20,7 +20,7 @@ createRoot(document.getElementById('root')).render(
   <StrictMode>
     <BrowserRouter>
 
-       <ReactKeycloakProvider authClient={keycloak} initOptions={{ onLoad: 'check-sso', pkceMethod: 'S256' , silentCheckSsoRedirectUri: window.location.origin + '/silent-check-sso.html' }}>
+       <ReactKeycloakProvider authClient={keycloak} initOptions={{ onLoad: 'check-sso', pkceMethod: 'S256', checkLoginIframe: false, silentCheckSsoRedirectUri: window.location.origin + '/silent-check-sso.html' }}>
           <App />
       </ReactKeycloakProvider>
 
