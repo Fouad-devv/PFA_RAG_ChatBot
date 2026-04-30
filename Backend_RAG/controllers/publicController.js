@@ -9,8 +9,20 @@ export const handGetPublicResponse = async (req, res) => {
       return res.status(400).json({ error: 'Message is required' });
     }
 
-    // For demo purposes, just return a fixed or generated answer hello world. In a real app, you'd call your AI/chat service here.
-    const answer = "Hello user ! ";
+    // Call FastAPI RAG service
+    let answer;
+    try {
+      const ragRes = await fetch("http://localhost:8000/rag", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question: message }),
+      });
+      const ragData = await ragRes.json();
+      answer = ragData.answer || "Je n'ai pas pu générer une réponse.";
+    } catch {
+      answer = "Le service RAG est indisponible. Veuillez réessayer.";
+    }
+
     return res.json({ answer });
 
   } catch (err) {

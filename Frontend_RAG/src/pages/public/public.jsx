@@ -57,14 +57,14 @@ export const Public = () => {
   };
 
   return (
-    <div className="flex h-screen bg-[#f5f7fa] overflow-hidden">
+    <div className="flex h-screen bg-white overflow-hidden">
       <PublicSidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
       {/* ── Main area ── */}
       <div className="flex-1 flex flex-col min-h-0">
 
         {/* Header */}
-        <header className="flex-shrink-0 flex items-center gap-3 px-5 py-2.5 bg-[#edf0f5] border-b border-[#dde2ea]">
+        <header className="flex-shrink-0 flex items-center gap-3 px-5 py-2.5 bg-white border-b border-slate-100">
           <button
             onClick={() => setSidebarOpen(true)}
             className="lg:hidden p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors"
@@ -99,7 +99,7 @@ export const Public = () => {
         <div
           ref={chatRef}
           onClick={() => setSidebarOpen(false)}
-          className="flex-1 overflow-y-auto custom-scrollbar px-4 md:px-10 lg:px-20 xl:px-36 py-8 space-y-5"
+          className="flex-1 overflow-y-auto custom-scrollbar bg-white px-4 md:px-10 lg:px-20 xl:px-36 py-8 space-y-5"
         >
           {messages.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center gap-8">
@@ -188,7 +188,7 @@ export const Public = () => {
         </div>
 
         {/* Input bar */}
-        <div className="flex-shrink-0 px-4 md:px-10 lg:px-20 xl:px-36 py-4 bg-[#f5f7fa]">
+        <div className="flex-shrink-0 px-4 md:px-10 lg:px-20 xl:px-36 py-4 bg-white">
           <div className="input-card flex items-end gap-3 px-4 py-3">
             <textarea
               ref={textareaRef}
