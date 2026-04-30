@@ -1,0 +1,89 @@
+services:
+
+  # ── PostgreSQL (Keycloak database) ────────────────────────────────────────
+  postgres:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: keycloak
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - rag-network
+
+  # ── Keycloak ──────────────────────────────────────────────────────────────
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0
+    restart: unless-stopped
+    command: start-dev
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: keycloak
+      KC_HTTP_PORT: 8081
+    ports:
+      - "8081:8081"
+    volumes:
+      - ./keycloak-theme/rag-theme:/opt/keycloak/themes/rag-theme
+    depends_on:
+      - postgres
+    networks:
+      - rag-network
+
+  # ── FastAPI RAG service ───────────────────────────────────────────────────
+  fastapi:
+    build: ./FastAPI_RAG
+    restart: unless-stopped
+    env_file:
+      - ./FastAPI_RAG/.env
+    volumes:
+      - ./FastAPI_RAG/data:/app/data
+    ports:
+      - "8000:8000"
+    networks:
+      - rag-network
+
+  # ── Node.js backend ───────────────────────────────────────────────────────
+  backend:
+    build: ./Backend_RAG
+    restart: unless-stopped
+    env_file:
+      - ./Backend_RAG/.env
+    environment:
+      FASTAPI_URL: http://fastapi:8000
+    ports:
+      - "5000:5000"
+    depends_on:
+      - fastapi
+      - keycloak
+    networks:
+      - rag-network
+
+  # ── React frontend ────────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./Frontend_RAG
+      args:
+        VITE_API_URL: http://localhost:5000
+        VITE_KEYCLOAK_URL: http://localhost:8081
+        VITE_KEYCLOAK_REALM: RealmPFE
+        VITE_KEYCLOAK_CLIENT_ID: ClientPFE
+    restart: unless-stopped
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+    networks:
+      - rag-network
+
+networks:
+  rag-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
