@@ -1,11 +1,11 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { PublicSidebar } from "./PublicSidebar.jsx";
 import axios from "../../api/axios.js";
 
 const STARTER_QUESTIONS = [
-  { icon: "💡", text: "Comment fonctionne le RAG ?" },
-  { icon: "🤖", text: "Qu'est-ce que l'intelligence artificielle ?" },
-  { icon: "🔢", text: "Explique-moi les embeddings." },
+  { icon: "📄", text: "Résume le document principal" },
+  { icon: "🔍", text: "Quelles sont les informations clés ?" },
+  { icon: "💡", text: "Explique le concept principal" },
   { icon: "⚖️", text: "Différence entre GPT et BERT ?" },
 ];
 
@@ -16,22 +16,25 @@ export const Public = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [copiedIdx, setCopiedIdx] = useState(null);
   const messagesEndRef = useRef(null);
+  const chatContainerRef = useRef(null);
   const textareaRef = useRef(null);
-  const chatRef = useRef(null);
 
-  const scrollToBottom = () =>
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  const scrollToBottom = useCallback(() =>
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), []);
+
+  useEffect(() => {
+    if (messages.length === 0) return;
+    scrollToBottom();
+  }, [messages, scrollToBottom]);
 
   const sendMessage = async (text) => {
     const msg = text.trim();
     if (!msg || loadingResponse) return;
 
-    const userMsg = { role: "user", content: msg };
-    setMessages((p) => [...p, userMsg]);
+    setMessages((p) => [...p, { role: "user", content: msg }]);
     setNewMessage("");
-    if (textareaRef.current) textareaRef.current.style.height = "52px";
+    if (textareaRef.current) textareaRef.current.style.height = "28px";
     setLoadingResponse(true);
-    setTimeout(scrollToBottom, 50);
 
     try {
       const res = await axios.post("/api/public/response", { message: msg });
@@ -40,7 +43,6 @@ export const Public = () => {
       setMessages((p) => [...p, { role: "assistant", content: "Oops ! Une erreur est survenue. Réessayez." }]);
     } finally {
       setLoadingResponse(false);
-      setTimeout(scrollToBottom, 80);
     }
   };
 
@@ -64,32 +66,24 @@ export const Public = () => {
       <div className="flex-1 flex flex-col min-h-0">
 
         {/* Header */}
-        <header className="flex-shrink-0 flex items-center gap-3 px-5 py-2.5 bg-white border-b border-slate-100">
+        <header className="flex-shrink-0 flex items-center gap-3 px-5 py-2.5 bg-slate-50 border-b border-slate-100 z-10">
           <button
             onClick={() => setSidebarOpen(true)}
-            className="lg:hidden p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors"
+            className="lg:hidden p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
 
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center shadow-sm shadow-emerald-200">
-              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                  d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-3 3-3-3z" />
-              </svg>
-            </div>
-            <div>
-              <h1 className="font-bold text-slate-900 text-sm leading-none">Chat public</h1>
-              <p className="text-[11px] text-slate-400 mt-0.5">
-                {messages.length > 0 ? `${messages.length} message${messages.length > 1 ? "s" : ""}` : "Sans compte requis"}
-              </p>
-            </div>
+          <div className="flex-1 min-w-0">
+            <h1 className="font-bold text-slate-900 text-[15px]">Chat public</h1>
+            <p className="text-[11px] text-slate-400 mt-0.5">
+              {messages.length > 0 ? `${messages.length} message${messages.length > 1 ? "s" : ""}` : "Sans compte requis"}
+            </p>
           </div>
 
-          <div className="ml-auto flex items-center gap-1.5 bg-amber-50 border border-amber-200 text-amber-700 text-[11px] font-semibold px-3 py-1.5 rounded-full">
+          <div className="flex items-center gap-1.5 bg-amber-50 border border-amber-200 text-amber-700 text-[11px] font-semibold px-3 py-1.5 rounded-full">
             <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
             Non sauvegardé
           </div>
@@ -97,13 +91,13 @@ export const Public = () => {
 
         {/* Messages */}
         <div
-          ref={chatRef}
+          ref={chatContainerRef}
           onClick={() => setSidebarOpen(false)}
-          className="flex-1 overflow-y-auto custom-scrollbar bg-white px-4 md:px-10 lg:px-20 xl:px-36 py-8 space-y-5"
+          className="flex-1 overflow-y-auto custom-scrollbar bg-slate-50 px-4 md:px-10 lg:px-20 xl:px-36 py-8 space-y-5"
         >
           {messages.length === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center gap-8">
-              <div className="text-center animate-fade-in">
+            <div className="h-full flex flex-col items-center justify-center gap-8 animate-fade-in">
+              <div className="text-center">
                 <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-400 to-emerald-600 mx-auto mb-5 flex items-center justify-center shadow-xl shadow-emerald-200">
                   <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -136,8 +130,8 @@ export const Public = () => {
                     {/* Avatar */}
                     <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-sm ${
                       isUser
-                        ? "bg-gradient-to-br from-slate-700 to-slate-900"
-                        : "bg-gradient-to-br from-emerald-400 to-emerald-600 shadow-emerald-200"
+                        ? "bg-gradient-to-br from-green-700 to-slate-900"
+                        : "bg-gradient-to-br from-emerald-400 to-emerald-600 shadow-emerald-100"
                     }`}>
                       {isUser ? "G" : "AI"}
                     </div>
@@ -150,7 +144,7 @@ export const Public = () => {
                         {m.content}
                       </div>
 
-                      {/* Copy action */}
+                      {/* Copy */}
                       <button
                         onClick={() => copyMsg(m.content, idx)}
                         className={`flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-lg transition-all ${
@@ -160,9 +154,9 @@ export const Public = () => {
                         }`}
                       >
                         {copiedIdx === idx ? (
-                          <><svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7"/></svg> Copié</>
+                          <><svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7"/></svg>Copié</>
                         ) : (
-                          <><svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg> Copier</>
+                          <><svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>Copier</>
                         )}
                       </button>
                     </div>
@@ -172,7 +166,7 @@ export const Public = () => {
 
               {loadingResponse && (
                 <div className="flex gap-3 animate-fade-in">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-xs font-bold text-white flex-shrink-0 shadow-sm shadow-emerald-200">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-xs font-bold text-white flex-shrink-0 shadow-md shadow-emerald-100">
                     AI
                   </div>
                   <div className="bubble-ai px-5 py-4 rounded-2xl rounded-bl-none flex items-center gap-1.5">
@@ -187,7 +181,7 @@ export const Public = () => {
           )}
         </div>
 
-        {/* Input bar */}
+        {/* Input */}
         <div className="flex-shrink-0 px-4 md:px-10 lg:px-20 xl:px-36 py-4 bg-white">
           <div className="input-card flex items-end gap-3 px-4 py-3">
             <textarea
@@ -207,7 +201,7 @@ export const Public = () => {
             <button
               onClick={() => sendMessage(newMessage)}
               disabled={loadingResponse || !newMessage.trim()}
-              className={`w-10 h-10 bg-gradient-to-br from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-white rounded-xl flex items-center justify-center shadow-md shadow-emerald-200 transition-all flex-shrink-0 ${
+              className={`w-10 h-10 bg-gradient-to-br from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-white rounded-xl flex items-center justify-center shadow-md shadow-emerald-100 transition-all flex-shrink-0 ${
                 loadingResponse || !newMessage.trim() ? "opacity-40 cursor-not-allowed" : "hover:scale-105 active:scale-95"
               }`}
             >
