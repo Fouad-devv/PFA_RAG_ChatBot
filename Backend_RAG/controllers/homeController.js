@@ -62,7 +62,19 @@ export const handGetResponse = async (req, res) => {
     // Save user message
     await Message.create({ conversationId: conversation._id, userId: user._id, role: "user", content: message });
 
-    const answer = "hello world";
+    // Call FastAPI RAG service
+    let answer;
+    try {
+      const ragRes = await fetch("http://localhost:8000/rag", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question: message }),
+      });
+      const ragData = await ragRes.json();
+      answer = ragData.answer || "Je n'ai pas pu générer une réponse.";
+    } catch {
+      answer = "Le service RAG est indisponible. Veuillez réessayer.";
+    }
 
     // Save assistant message
     await Message.create({ conversationId: conversation._id, userId: user._id, role: "assistant", content: answer });
