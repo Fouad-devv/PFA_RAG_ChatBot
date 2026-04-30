@@ -23,7 +23,7 @@ app.add_middleware(
 
 class QueryRequest(BaseModel):
     question: str
-    top_k: int = 5
+    top_k: int = 8
 
 class IngestRequest(BaseModel):
     chunks: list[str]
@@ -51,10 +51,13 @@ def rag_query(req: QueryRequest):
 
     # 4. System prompt with injected context
     system_prompt = (
-        "Tu es un assistant intelligent. Réponds à la question de l'utilisateur "
-        "en te basant uniquement sur le contexte suivant.\n"
-        "Si la réponse n'est pas dans le contexte, dis-le honnêtement.\n\n"
-        f"Contexte :\n{context}"
+        "Tu es un assistant expert en droit du travail marocain. "
+        "On t'a fourni ci-dessous des extraits réels tirés directement du Code du Travail marocain. "
+        "Ta mission est de lire ces extraits et d'expliquer leur contenu à l'utilisateur de façon claire. "
+        "Appuie-toi uniquement sur ces extraits. Cite les articles quand ils apparaissent. "
+        "Tu n'as pas besoin de reproduire le document entier — résume et explique ce que les extraits contiennent. "
+        "Ne refuse jamais de répondre.\n\n"
+        f"--- Extraits du document ---\n{context}\n--- Fin des extraits ---"
     )
 
     # 5. Call Groq LLM (free)

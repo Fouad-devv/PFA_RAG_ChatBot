@@ -9,7 +9,7 @@ def get_client() -> Groq:
         _client = Groq(api_key=os.getenv("GROQ_API_KEY"))
     return _client
 
-def chat(system_prompt: str, user_message: str, model: str = "llama-3.1-8b-instant") -> str:
+def chat(system_prompt: str, user_message: str, model: str = "llama-3.3-70b-versatile") -> str:
     response = get_client().chat.completions.create(
         model=model,
         messages=[
