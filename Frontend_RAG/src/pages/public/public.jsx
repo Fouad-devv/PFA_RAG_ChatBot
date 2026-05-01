@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { PublicSidebar } from "./PublicSidebar.jsx";
 import axios from "../../api/axios.js";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 const STARTER_QUESTIONS = [
   { icon: "⚖️", text: "Quels sont les droits du salarié en cas de licenciement ?" },
@@ -18,6 +20,7 @@ export const Public = () => {
   const messagesEndRef = useRef(null);
   const chatContainerRef = useRef(null);
   const textareaRef = useRef(null);
+  const abortControllerRef = useRef(null);
 
   const scrollToBottom = useCallback(() =>
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), []);
@@ -36,15 +39,22 @@ export const Public = () => {
     if (textareaRef.current) textareaRef.current.style.height = "28px";
     setLoadingResponse(true);
 
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     try {
-      const res = await axios.post("/api/public/response", { message: msg });
+      const res = await axios.post("/api/public/response", { message: msg }, { signal: controller.signal });
       setMessages((p) => [...p, { role: "assistant", content: res.data.answer }]);
-    } catch {
-      setMessages((p) => [...p, { role: "assistant", content: "Oops ! Une erreur est survenue. Réessayez." }]);
+    } catch (err) {
+      if (err.name !== "CanceledError" && err.code !== "ERR_CANCELED") {
+        setMessages((p) => [...p, { role: "assistant", content: "Oops ! Une erreur est survenue. Réessayez." }]);
+      }
     } finally {
       setLoadingResponse(false);
     }
   };
+
+  const stopGeneration = () => abortControllerRef.current?.abort();
 
   const copyMsg = async (content, idx) => {
     await navigator.clipboard.writeText(content).catch(() => {});
@@ -137,11 +147,24 @@ export const Public = () => {
                     </div>
 
                     {/* Bubble + actions */}
-                    <div className={`flex flex-col gap-1.5 min-w-0 max-w-[72%] ${isUser ? "items-end" : "items-start"}`}>
+                    <div className={`flex flex-col gap-1.5 min-w-0 ${isUser ? "max-w-[72%] items-end" : "max-w-[90%] sm:max-w-[72%] items-start"}`}>
                       <div className={`w-full px-4 py-3 rounded-2xl text-[15px] leading-relaxed [overflow-wrap:anywhere] ${
                         isUser ? "bubble-user rounded-br-none" : "bubble-ai rounded-bl-none"
                       }`}>
-                        {m.content}
+                        {isUser ? m.content : (
+                          <ReactMarkdown
+                            remarkPlugins={[remarkGfm]}
+                            components={{
+                              p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                              strong: ({ children }) => <strong className="font-semibold text-emerald-700">{children}</strong>,
+                              ul: ({ children }) => <ul className="list-disc list-inside space-y-1 my-2">{children}</ul>,
+                              ol: ({ children }) => <ol className="list-decimal list-inside space-y-1 my-2">{children}</ol>,
+                              li: ({ children }) => <li className="ml-2">{children}</li>,
+                            }}
+                          >
+                            {m.content}
+                          </ReactMarkdown>
+                        )}
                       </div>
 
                       {/* Copy */}
@@ -198,17 +221,28 @@ export const Public = () => {
                 if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(newMessage); }
               }}
             />
-            <button
-              onClick={() => sendMessage(newMessage)}
-              disabled={loadingResponse || !newMessage.trim()}
-              className={`w-10 h-10 bg-gradient-to-br from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-white rounded-xl flex items-center justify-center shadow-md shadow-emerald-100 transition-all flex-shrink-0 ${
-                loadingResponse || !newMessage.trim() ? "opacity-40 cursor-not-allowed" : "hover:scale-105 active:scale-95"
-              }`}
-            >
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 12h14m0 0l-6-6m6 6l-6 6" />
-              </svg>
-            </button>
+            {loadingResponse ? (
+              <button
+                onClick={stopGeneration}
+                className="w-10 h-10 bg-gradient-to-br from-red-500 to-red-600 hover:from-red-400 hover:to-red-500 text-white rounded-xl flex items-center justify-center shadow-md shadow-red-100 transition-all flex-shrink-0 hover:scale-105 active:scale-95"
+              >
+                <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
+                  <rect x="6" y="6" width="12" height="12" rx="2" />
+                </svg>
+              </button>
+            ) : (
+              <button
+                onClick={() => sendMessage(newMessage)}
+                disabled={!newMessage.trim()}
+                className={`w-10 h-10 bg-gradient-to-br from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-white rounded-xl flex items-center justify-center shadow-md shadow-emerald-100 transition-all flex-shrink-0 ${
+                  !newMessage.trim() ? "opacity-40 cursor-not-allowed" : "hover:scale-105 active:scale-95"
+                }`}
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 12h14m0 0l-6-6m6 6l-6 6" />
+                </svg>
+              </button>
+            )}
           </div>
           <p className="text-center text-[11px] text-slate-400 mt-2">
             Shift+Entrée pour une nouvelle ligne
