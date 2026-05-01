@@ -7,10 +7,10 @@ import { showToast } from "../../components/Toast";
 dayjs.extend(relativeTime);
 
 const STARTER_QUESTIONS = [
-  { icon: "📄", text: "Résume le document principal" },
-  { icon: "🔍", text: "Quelles sont les informations clés ?" },
-  { icon: "💡", text: "Explique le concept principal" },
-  { icon: "🧩", text: "Donne-moi un exemple concret" },
+  { icon: "⚖️", text: "Quels sont les droits du salarié en cas de licenciement ?" },
+  { icon: "📄", text: "Quelle est la durée légale du travail au Maroc ?" },
+  { icon: "🏖️", text: "Combien de jours de congé annuel a droit un salarié ?" },
+  { icon: "💰", text: "Comment est calculée l'indemnité de licenciement ?" },
 ];
 
 const MAX_CHARS = 4000;

@@ -3,10 +3,10 @@ import { PublicSidebar } from "./PublicSidebar.jsx";
 import axios from "../../api/axios.js";
 
 const STARTER_QUESTIONS = [
-  { icon: "📄", text: "Résume le document principal" },
-  { icon: "🔍", text: "Quelles sont les informations clés ?" },
-  { icon: "💡", text: "Explique le concept principal" },
-  { icon: "⚖️", text: "Différence entre GPT et BERT ?" },
+  { icon: "⚖️", text: "Quels sont les droits du salarié en cas de licenciement ?" },
+  { icon: "📄", text: "Quelle est la durée légale du travail au Maroc ?" },
+  { icon: "🏖️", text: "Combien de jours de congé annuel a droit un salarié ?" },
+  { icon: "💰", text: "Comment est calculée l'indemnité de licenciement ?" },
 ];
 
 export const Public = () => {
