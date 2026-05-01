@@ -6,7 +6,7 @@ def get_model() -> SentenceTransformer:
     global _model
     if _model is None:
         # Downloaded once on first run (~130MB), then cached locally
-        _model = SentenceTransformer("BAAI/bge-small-en-v1.5")
+        _model = SentenceTransformer("sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
     return _model
 
 
