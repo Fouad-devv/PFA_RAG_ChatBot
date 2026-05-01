@@ -58,7 +58,7 @@ export const handGetResponse = async (req, res) => {
     } else {
       conversation = await Conversation.findOne({ _id: conversationId, userId: user._id });
       if (!conversation) return res.status(404).json({ error: "Conversation not found" });
-      if (conversation.title === "New Conversation") {
+      if (conversation.title === "New Conversation" && !isGreeting(message)) {
         conversation.title = await generateTitle(message);
       }
     }
