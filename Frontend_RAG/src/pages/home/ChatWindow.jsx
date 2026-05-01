@@ -3,6 +3,8 @@ import { useKeycloak } from "@react-keycloak/web";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import { showToast } from "../../components/Toast";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 dayjs.extend(relativeTime);
 
@@ -302,7 +304,20 @@ const Bubble = ({ m, idx, username, copiedId, onCopy, canRegenerate, onRegenerat
         <div className={`w-full px-4 py-3 rounded-2xl text-[15px] leading-relaxed [overflow-wrap:anywhere] ${
           isUser ? "bubble-user rounded-br-none" : "bubble-ai rounded-bl-none"
         }`}>
-          {m.content}
+          {isUser ? m.content : (
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              components={{
+                p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                strong: ({ children }) => <strong className="font-semibold text-emerald-700">{children}</strong>,
+                ul: ({ children }) => <ul className="list-disc list-inside space-y-1 my-2">{children}</ul>,
+                ol: ({ children }) => <ol className="list-decimal list-inside space-y-1 my-2">{children}</ol>,
+                li: ({ children }) => <li className="ml-2">{children}</li>,
+              }}
+            >
+              {m.content}
+            </ReactMarkdown>
+          )}
         </div>
 
         {/* Meta: timestamp + actions */}

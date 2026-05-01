@@ -58,7 +58,9 @@ def rag_query(req: QueryRequest):
         "Réponds UNIQUEMENT en te basant sur les extraits du Code du Travail marocain fournis ci-dessous. "
         "Si la réponse ne se trouve pas dans ces extraits, réponds exactement : "
         "'Je ne trouve pas d'information sur ce sujet dans les documents du Code du Travail marocain.' "
-        "N'utilise jamais tes connaissances générales. Cite les articles quand ils apparaissent.\n\n"
+        "N'utilise jamais tes connaissances générales. Cite les articles quand ils apparaissent.\n"
+        "Formate ta réponse en Markdown : utilise **gras** pour les termes importants et les références d'articles, "
+        "des listes à puces ou numérotées pour les énumérations, et des sauts de ligne clairs entre les sections.\n\n"
         f"--- Extraits du document ---\n{context}\n--- Fin des extraits ---"
     )
 
