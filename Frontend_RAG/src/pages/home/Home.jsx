@@ -22,6 +22,7 @@ export const Home = () => {
   const [openSpaceUser, setOpenSpaceUser] = useState(null);
 
   const username = keycloak.tokenParsed?.preferred_username || "User";
+  const abortControllerRef = useRef(null);
 
 
   // ── Fetch conversations list ──────────────────────────────────────────────
@@ -93,11 +94,14 @@ export const Home = () => {
     setNewMessage("");
     setLoadingResponse(true);
 
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     try {
       const res = await axiosPrivate.post("/api/home/response", {
         message: newMessage,
         conversationId: activeConversation._id,
-      });
+      }, { signal: controller.signal });
 
       setMessages((prev) => [...prev, { role: "assistant", content: res.data.answer, createdAt: new Date() }]);
       setConversations((prev) =>
@@ -109,7 +113,9 @@ export const Home = () => {
       );
       setActiveConversation((prev) => ({ ...prev, title: res.data.title || prev.title }));
     } catch (err) {
-      console.error("Failed to send message", err);
+      if (err.name !== "CanceledError" && err.code !== "ERR_CANCELED") {
+        console.error("Failed to send message", err);
+      }
     } finally {
       setLoadingResponse(false);
     }
@@ -121,11 +127,15 @@ export const Home = () => {
     if (!activeConversation || loadingResponse) return;
     setMessages((prev) => [...prev, { role: "user", content: question, createdAt: new Date() }]);
     setLoadingResponse(true);
+
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     try {
       const res = await axiosPrivate.post("/api/home/response", {
         message: question,
         conversationId: activeConversation._id,
-      });
+      }, { signal: controller.signal });
       setMessages((prev) => [...prev, { role: "assistant", content: res.data.answer, createdAt: new Date() }]);
       setConversations((prev) =>
         prev.map((c) =>
@@ -171,18 +181,30 @@ export const Home = () => {
     });
 
     setLoadingResponse(true);
+
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     try {
       const res = await axiosPrivate.post("/api/home/response", {
         message: lastUserMsg.content,
         conversationId: activeConversation._id,
-      });
+      }, { signal: controller.signal });
       setMessages((prev) => [...prev, { role: "assistant", content: res.data.answer, createdAt: new Date() }]);
-    } catch {
-      setMessages((prev) => [...prev, { role: "assistant", content: "Une erreur est survenue.", createdAt: new Date() }]);
+    } catch (err) {
+      if (err.name !== "CanceledError" && err.code !== "ERR_CANCELED") {
+        setMessages((prev) => [...prev, { role: "assistant", content: "Une erreur est survenue.", createdAt: new Date() }]);
+      }
     } finally {
       setLoadingResponse(false);
     }
   }, [messages, activeConversation, axiosPrivate, loadingResponse]);
+
+
+  // ── Stop generation ───────────────────────────────────────────────────────
+  const handleStopGeneration = useCallback(() => {
+    abortControllerRef.current?.abort();
+  }, []);
 
 
   // ── Delete conversation from state ────────────────────────────────────────
@@ -271,6 +293,7 @@ export const Home = () => {
         onSendMessage={handleSendMessage}
         onRegenerateResponse={handleRegenerateResponse}
         onStarterQuestion={handleStarterQuestion}
+        onStopGeneration={handleStopGeneration}
         setSidebarOpen={setSidebarOpen}
         setOpenSpaceUser={setOpenSpaceUser}
         openSpaceUser={openSpaceUser}

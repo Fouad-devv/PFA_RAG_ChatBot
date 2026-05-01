@@ -24,6 +24,7 @@ const ChatWindow = ({
   setNewMessage,
   onSendMessage,
   onRegenerateResponse,
+  onStopGeneration,
   loadingResponse,
   loadingMessages,
   setSidebarOpen,
@@ -255,17 +256,28 @@ const ChatWindow = ({
                 if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); }
               }}
             />
-            <button
-              onClick={handleSend}
-              disabled={loadingResponse || !newMessage.trim()}
-              className={`w-10 h-10 bg-gradient-to-br from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-white rounded-xl flex items-center justify-center shadow-md shadow-emerald-100 transition-all flex-shrink-0 ${
-                loadingResponse || !newMessage.trim() ? "opacity-40 cursor-not-allowed" : "hover:scale-105 active:scale-95"
-              }`}
-            >
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 12h14m0 0l-6-6m6 6l-6 6" />
-              </svg>
-            </button>
+            {loadingResponse ? (
+              <button
+                onClick={onStopGeneration}
+                className="w-10 h-10 bg-gradient-to-br from-red-500 to-red-600 hover:from-red-400 hover:to-red-500 text-white rounded-xl flex items-center justify-center shadow-md shadow-red-100 transition-all flex-shrink-0 hover:scale-105 active:scale-95"
+              >
+                <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
+                  <rect x="6" y="6" width="12" height="12" rx="2" />
+                </svg>
+              </button>
+            ) : (
+              <button
+                onClick={handleSend}
+                disabled={!newMessage.trim()}
+                className={`w-10 h-10 bg-gradient-to-br from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-white rounded-xl flex items-center justify-center shadow-md shadow-emerald-100 transition-all flex-shrink-0 ${
+                  !newMessage.trim() ? "opacity-40 cursor-not-allowed" : "hover:scale-105 active:scale-95"
+                }`}
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 12h14m0 0l-6-6m6 6l-6 6" />
+                </svg>
+              </button>
+            )}
           </div>
 
           {newMessage.length > 0 && (
