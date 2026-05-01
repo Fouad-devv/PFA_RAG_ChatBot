@@ -17,7 +17,7 @@ services:
   keycloak:
     image: quay.io/keycloak/keycloak:latest
     restart: unless-stopped
-    command: start-dev
+    command: start-dev --import-realm
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: fouad
       KC_BOOTSTRAP_ADMIN_PASSWORD: fouad
@@ -30,6 +30,7 @@ services:
       - "8081:8081"
     volumes:
       - ./keycloak-theme/rag-theme:/opt/keycloak/themes/rag-theme
+      - ./keycloak-realm-export.json:/opt/keycloak/data/import/realm-export.json
     depends_on:
       - postgres
     networks:
