@@ -300,7 +300,7 @@ const Bubble = ({ m, idx, username, copiedId, onCopy, canRegenerate, onRegenerat
       </div>
 
       {/* Content */}
-      <div className={`flex flex-col gap-1.5 min-w-0 max-w-[72%] ${isUser ? "items-end" : "items-start"}`}>
+      <div className={`flex flex-col gap-1.5 min-w-0 ${isUser ? "max-w-[72%] items-end" : "max-w-[90%] sm:max-w-[72%] items-start"}`}>
         <div className={`w-full px-4 py-3 rounded-2xl text-[15px] leading-relaxed [overflow-wrap:anywhere] ${
           isUser ? "bubble-user rounded-br-none" : "bubble-ai rounded-bl-none"
         }`}>
