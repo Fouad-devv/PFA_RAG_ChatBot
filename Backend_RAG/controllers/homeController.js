@@ -4,6 +4,10 @@ import Conversation from "../models/Conversation.js";
 import Message from "../models/Message.js";
 import OpenAI from "openai";
 
+const isGreeting = (message) => {
+  return /^(hi|hello|hey|howdy|greetings|good morning|good afternoon|good evening|salut|bonjour|bonsoir|hola|ciao|yo|sup|what'?s up|hiya)\s*[!?.]*$/i.test(message.trim());
+};
+
 const generateTitle = async (userMessage) => {
   try {
     const groq = new OpenAI({
@@ -49,7 +53,7 @@ export const handGetResponse = async (req, res) => {
     // Find or create conversation + generate title with Groq
     let conversation;
     if (!conversationId) {
-      const title = await generateTitle(message);
+      const title = isGreeting(message) ? "New Conversation" : await generateTitle(message);
       conversation = await Conversation.create({ userId: user._id, title, lastMessagePreview: "" });
     } else {
       conversation = await Conversation.findOne({ _id: conversationId, userId: user._id });
