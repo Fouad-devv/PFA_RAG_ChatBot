@@ -51,6 +51,19 @@
     <div class="kc-right">
       <div class="kc-form-box">
 
+        <div class="kc-mobile-brand">
+          <div class="kc-brand-icon">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-3 3-3-3z"/>
+            </svg>
+          </div>
+          <div class="kc-brand-text">
+            <div class="kc-brand-name">RAG Assistant</div>
+            <div class="kc-brand-ver">v1.0</div>
+          </div>
+        </div>
+
         <div class="kc-auth-badge"><span class="dot"></span>VÉRIFICATION EMAIL</div>
         <h2 class="kc-form-title">Email envoyé !</h2>
         <p class="kc-form-subtitle">Un lien de vérification a été envoyé à votre adresse email</p>
