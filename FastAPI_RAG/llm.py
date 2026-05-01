@@ -3,11 +3,15 @@ from groq import Groq
 
 _client = None
 
+
+
 def get_client() -> Groq:
     global _client
     if _client is None:
         _client = Groq(api_key=os.getenv("GROQ_API_KEY"))
     return _client
+
+
 
 def chat(system_prompt: str, user_message: str, model: str = "llama-3.3-70b-versatile") -> str:
     response = get_client().chat.completions.create(

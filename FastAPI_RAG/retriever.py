@@ -3,6 +3,7 @@ from pymongo import MongoClient
 
 _client = None
 
+
 def get_collection():
     global _client
     if _client is None:
@@ -10,28 +11,35 @@ def get_collection():
     db = _client[os.getenv("MONGO_DB", "PFE")]
     return db["documents"]
 
+
+
+#_________________________________________________________________
+
 def vector_search(query_vector: list[float], top_k: int = 5) -> list[dict]:
     collection = get_collection()
     pipeline = [
         {
             "$vectorSearch": {
-                "index": "vector_index",
-                "path": "embedding",
-                "queryVector": query_vector,
-                "numCandidates": top_k * 10,
-                "limit": top_k,
+                "index": "vector_index",  # the Atlas Search index you created
+                "path": "embedding",      # which field to search in each document
+                "queryVector": query_vector,  # the vector representation of the query
+                "numCandidates": top_k * 10,  # examine 50 candidates (if top_k=5) to ensure we get the best matches
+                "limit": top_k,          # return only the best 8
             }
         },
         {
             "$project": {
-                "_id": 0,
-                "content": 1,
-                "source": 1,
-                "score": {"$meta": "vectorSearchScore"},
+                "_id": 0,     # exclude the MongoDB internal ID
+                "content": 1, # include the text
+                "source": 1,  # include the source
+                "score": {"$meta": "vectorSearchScore"},  # include similarity score
             }
         },
     ]
     return list(collection.aggregate(pipeline))
+
+
+#___________________________________________________________________________
 
 def insert_chunks(chunks: list[str], vectors: list[list[float]], source: str) -> int:
     collection = get_collection()

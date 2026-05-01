@@ -46,37 +46,37 @@ def ingest_pdf(pdf_path: str):
     # 1. Extract text
     text = extract_text_from_pdf(pdf_path)
     if not text:
-        print(f"   ⚠️  No text found in {filename}, skipping.")
+        print(f"   No text found in {filename}, skipping.")
         return
 
-    print(f"   ✅ Extracted {len(text)} characters")
+    print(f"   Extracted {len(text)} characters")
 
     # 2. Split into chunks
     chunks = chunk_text(text)
-    print(f"   ✅ Split into {len(chunks)} chunks")
+    print(f"  Split into {len(chunks)} chunks")
 
     # 3. Embed all chunks locally (no OpenAI)
-    print(f"   ⏳ Embedding chunks (this may take a moment)...")
+    print(f"   Embedding chunks (this may take a moment)...")
     vectors = embed_batch(chunks)
-    print(f"   ✅ Embeddings generated ({len(vectors[0])} dimensions each)")
+    print(f"   Embeddings generated ({len(vectors[0])} dimensions each)")
 
     # 4. Store in MongoDB Atlas
     inserted = insert_chunks(chunks, vectors, source=filename)
-    print(f"   ✅ Inserted {inserted} chunks into MongoDB Atlas")
+    print(f"   Inserted {inserted} chunks into MongoDB Atlas")
 
 
 if __name__ == "__main__":
     pdf_files = glob.glob("data/*.pdf")
 
     if not pdf_files:
-        print("❌ No PDF files found in the data/ folder.")
+        print(" No PDF files found in the data/ folder.")
         print("   → Put your PDF files in FastAPI_RAG/data/ and run again.")
         exit(1)
 
-    print(f"🚀 Found {len(pdf_files)} PDF(s) to ingest: {[os.path.basename(f) for f in pdf_files]}")
+    print(f" Found {len(pdf_files)} PDF(s) to ingest: {[os.path.basename(f) for f in pdf_files]}")
 
     for pdf_path in pdf_files:
         ingest_pdf(pdf_path)
 
-    print("\n🎉 Ingestion complete! Your data is now in MongoDB Atlas.")
+    print("\n Ingestion complete! Your data is now in MongoDB Atlas.")
     print("   → Start the FastAPI server: uvicorn main:app --reload --port 8000")

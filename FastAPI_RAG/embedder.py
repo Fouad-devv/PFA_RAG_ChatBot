@@ -9,8 +9,12 @@ def get_model() -> SentenceTransformer:
         _model = SentenceTransformer("BAAI/bge-small-en-v1.5")
     return _model
 
+
+# one vector
 def embed(text: str) -> list[float]:
     return get_model().encode(text, normalize_embeddings=True).tolist()
 
+
+# batch of vectors
 def embed_batch(texts: list[str]) -> list[list[float]]:
     return get_model().encode(texts, normalize_embeddings=True).tolist()

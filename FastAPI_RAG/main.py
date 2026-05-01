@@ -30,10 +30,13 @@ class IngestRequest(BaseModel):
     source: str = "unknown"
 
 
+
+
 # ── RAG endpoint ───────────────────────────────────────────────────────────────
 
 @app.post("/rag")
 def rag_query(req: QueryRequest):
+    
     # 1. Embed the question locally (no OpenAI)
     query_vector = embed(req.question)
 
@@ -52,11 +55,10 @@ def rag_query(req: QueryRequest):
     # 4. System prompt with injected context
     system_prompt = (
         "Tu es un assistant expert en droit du travail marocain. "
-        "On t'a fourni ci-dessous des extraits réels tirés directement du Code du Travail marocain. "
-        "Ta mission est de lire ces extraits et d'expliquer leur contenu à l'utilisateur de façon claire. "
-        "Appuie-toi uniquement sur ces extraits. Cite les articles quand ils apparaissent. "
-        "Tu n'as pas besoin de reproduire le document entier — résume et explique ce que les extraits contiennent. "
-        "Ne refuse jamais de répondre.\n\n"
+        "Réponds UNIQUEMENT en te basant sur les extraits du Code du Travail marocain fournis ci-dessous. "
+        "Si la réponse ne se trouve pas dans ces extraits, réponds exactement : "
+        "'Je ne trouve pas d'information sur ce sujet dans les documents du Code du Travail marocain.' "
+        "N'utilise jamais tes connaissances générales. Cite les articles quand ils apparaissent.\n\n"
         f"--- Extraits du document ---\n{context}\n--- Fin des extraits ---"
     )
 
@@ -67,6 +69,8 @@ def rag_query(req: QueryRequest):
         "answer": answer,
         "sources": list({c.get("source") for c in chunks}),
     }
+
+
 
 
 # ── Ingest endpoint ────────────────────────────────────────────────────────────
@@ -81,6 +85,8 @@ def ingest(req: IngestRequest):
 
     inserted = insert_chunks(req.chunks, vectors, req.source)
     return {"inserted": inserted, "source": req.source}
+
+
 
 
 # ── Health check ───────────────────────────────────────────────────────────────
