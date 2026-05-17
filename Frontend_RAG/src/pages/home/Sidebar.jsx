@@ -42,6 +42,8 @@ const Sidebar = ({
 
   const username = keycloak.tokenParsed?.preferred_username || "User";
   const email    = keycloak.tokenParsed?.email || "";
+  const roles    = keycloak.tokenParsed?.realm_access?.roles ?? [];
+  const role     = roles.includes("admin") ? "admin" : "user";
 
   const handleLogout = () => keycloak.logout({ redirectUri: window.location.origin });
 
@@ -255,6 +257,13 @@ const Sidebar = ({
                 <div className="min-w-0">
                   <p className="text-sm font-bold text-white truncate">{username}</p>
                   <p className="text-xs text-slate-400 truncate">{email || "Connecté"}</p>
+                  <span className={`inline-block mt-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                    role === "admin"
+                      ? "bg-amber-400/20 text-amber-300 border border-amber-400/30"
+                      : "bg-emerald-400/20 text-emerald-300 border border-emerald-400/30"
+                  }`}>
+                    {role}
+                  </span>
                 </div>
               </div>
               <button
@@ -284,7 +293,15 @@ const Sidebar = ({
             </div>
             <div className="flex-1 min-w-0 text-left">
               <p className="text-sm font-semibold text-slate-900 truncate">{username}</p>
-              <p className="text-xs text-slate-400 truncate">{email || "Connecté"}</p>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <span className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-px rounded-full ${
+                  role === "admin"
+                    ? "bg-amber-100 text-amber-600"
+                    : "bg-emerald-100 text-emerald-600"
+                }`}>
+                  {role}
+                </span>
+              </div>
             </div>
             <svg className={`w-4 h-4 text-slate-400 transition-transform duration-200 flex-shrink-0 ${openSpaceUser ? "rotate-180" : ""}`}
               fill="currentColor" viewBox="0 0 24 24">
