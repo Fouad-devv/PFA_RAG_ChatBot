@@ -10,6 +10,7 @@ from stores.llm.LLMProviderFactory import LLMProviderFactory
 from stores.llm.providers.MultiLLMProvider import MultiLLMProvider
 from stores.vectordb.VectorDBProviderFactory import VectorDBProviderFactory
 from routes import base, nlp
+from routes.admin import admin_router
 
 
 @asynccontextmanager
@@ -68,3 +69,4 @@ app.add_middleware(
 
 app.include_router(base.base_router)
 app.include_router(nlp.nlp_router)
+app.include_router(admin_router)

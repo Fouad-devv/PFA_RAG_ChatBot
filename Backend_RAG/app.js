@@ -15,6 +15,7 @@ import { verifyToken } from './Middleware/verifyToken.js';
 //importing routes
 import homeRoute from './routers/homeRoute.js';
 import publicRoute from './routers/publicRoute.js';
+import adminRoute from './routers/adminRoute.js';
 
 
 // Connect to Database
@@ -34,6 +35,7 @@ app.use('/api/public', publicRoute);
 
 app.use(verifyToken, attachUserId);
 app.use('/api/home', homeRoute);
+app.use('/api/admin', adminRoute);
 
 
 
