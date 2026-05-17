@@ -1,5 +1,4 @@
 import logging
-from sentence_transformers import SentenceTransformer
 from ..LLMInterface import LLMInterface
 from ..LLMEnums import LocalEnums, DocumentTypeEnum
 
@@ -18,6 +17,13 @@ class LocalEmbeddingProvider(LLMInterface):
         self.logger.error("LocalEmbeddingProvider does not support text generation")
 
     def set_embedding_model(self, model_id: str, embedding_size: int):
+        try:
+            from sentence_transformers import SentenceTransformer
+        except ImportError:
+            raise ImportError(
+                "sentence-transformers is not installed. "
+                "Run: pip install sentence-transformers"
+            )
         self.embedding_model_id = model_id
         self.embedding_size = embedding_size
         self._model = SentenceTransformer(model_id)
