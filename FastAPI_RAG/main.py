@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -5,11 +6,17 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from embedder import embed, embed_batch
+from embedder import embed, embed_batch, get_model
 from retriever import vector_search, insert_chunks
 from llm import chat
 
-app = FastAPI(title="RAG Service")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    get_model()  # download/cache the embedding model before accepting requests
+    yield
+
+app = FastAPI(title="RAG Service", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
