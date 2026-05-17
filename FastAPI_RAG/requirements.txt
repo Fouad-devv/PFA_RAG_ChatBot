@@ -5,3 +5,7 @@ pymongo
 python-dotenv
 groq
 pdfplumber
+pydantic-settings
+google-generativeai
+cohere
+voyageai

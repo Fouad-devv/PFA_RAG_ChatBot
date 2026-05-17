@@ -299,6 +299,7 @@ const ChatWindow = ({
 /* ── Single message bubble ── */
 const Bubble = ({ m, idx, username, copiedId, onCopy, canRegenerate, onRegenerate, loadingResponse }) => {
   const isUser = m.role === "user";
+  const rtl = /[؀-ۿ]/.test(m.content ?? "");
 
   return (
     <div className={`flex gap-3 group animate-fade-in ${isUser ? "flex-row-reverse" : "flex-row"}`}>
@@ -317,18 +318,20 @@ const Bubble = ({ m, idx, username, copiedId, onCopy, canRegenerate, onRegenerat
           isUser ? "bubble-user rounded-br-none" : "bubble-ai rounded-bl-none"
         }`}>
           {isUser ? m.content : (
-            <ReactMarkdown
-              remarkPlugins={[remarkGfm]}
-              components={{
-                p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
-                strong: ({ children }) => <strong className="font-semibold text-emerald-700">{children}</strong>,
-                ul: ({ children }) => <ul className="list-disc list-inside space-y-1 my-2">{children}</ul>,
-                ol: ({ children }) => <ol className="list-decimal list-inside space-y-1 my-2">{children}</ol>,
-                li: ({ children }) => <li className="ml-2">{children}</li>,
-              }}
-            >
-              {m.content}
-            </ReactMarkdown>
+            <div dir={rtl ? "rtl" : "ltr"}>
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                components={{
+                  p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                  strong: ({ children }) => <strong className="font-semibold text-emerald-700">{children}</strong>,
+                  ul: ({ children }) => <ul className="list-disc list-inside space-y-1 my-2">{children}</ul>,
+                  ol: ({ children }) => <ol className="list-decimal list-inside space-y-1 my-2">{children}</ol>,
+                  li: ({ children }) => <li className={rtl ? "mr-2" : "ml-2"}>{children}</li>,
+                }}
+              >
+                {m.content}
+              </ReactMarkdown>
+            </div>
           )}
         </div>
 

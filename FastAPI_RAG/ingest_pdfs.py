@@ -8,13 +8,16 @@ import os
 import glob
 import pdfplumber
 from dotenv import load_dotenv
-from embedder import embed_batch
-from retriever import insert_chunks
 
 load_dotenv()
 
-CHUNK_SIZE = 500      # characters per chunk
-CHUNK_OVERLAP = 100   # overlap between chunks to keep context
+from helpers.config import get_settings
+from stores.llm.LLMProviderFactory import LLMProviderFactory
+from stores.vectordb.VectorDBProviderFactory import VectorDBProviderFactory
+from controllers.NLPController import NLPController
+
+CHUNK_SIZE    = 500
+CHUNK_OVERLAP = 100
 
 
 def extract_text_from_pdf(pdf_path: str) -> str:
@@ -31,52 +34,69 @@ def chunk_text(text: str, chunk_size: int = CHUNK_SIZE, overlap: int = CHUNK_OVE
     chunks = []
     start = 0
     while start < len(text):
-        end = start + chunk_size
-        chunk = text[start:end].strip()
+        chunk = text[start:start + chunk_size].strip()
         if chunk:
             chunks.append(chunk)
         start += chunk_size - overlap
     return chunks
 
 
-def ingest_pdf(pdf_path: str):
-    filename = os.path.basename(pdf_path)
-    print(f"\n📄 Processing: {filename}")
+def build_controller() -> NLPController:
+    settings = get_settings()
+    llm_factory      = LLMProviderFactory(settings)
+    vectordb_factory = VectorDBProviderFactory(settings)
 
-    # 1. Extract text
-    text = extract_text_from_pdf(pdf_path)
-    if not text:
-        print(f"   No text found in {filename}, skipping.")
-        return
+    embedding_client = llm_factory.create(provider=settings.EMBEDDING_BACKEND)
+    embedding_client.set_embedding_model(
+        model_id=settings.EMBEDDING_MODEL_ID,
+        embedding_size=settings.EMBEDDING_MODEL_SIZE,
+    )
 
-    print(f"   Extracted {len(text)} characters")
+    vectordb_client = vectordb_factory.create(provider=settings.VECTOR_DB_BACKEND)
+    vectordb_client.connect()
 
-    # 2. Split into chunks
-    chunks = chunk_text(text)
-    print(f"  Split into {len(chunks)} chunks")
-
-    # 3. Embed all chunks locally (no OpenAI)
-    print(f"   Embedding chunks (this may take a moment)...")
-    vectors = embed_batch(chunks)
-    print(f"   Embeddings generated ({len(vectors[0])} dimensions each)")
-
-    # 4. Store in MongoDB Atlas
-    inserted = insert_chunks(chunks, vectors, source=filename)
-    print(f"   Inserted {inserted} chunks into MongoDB Atlas")
+    # generation_client not needed for ingestion — pass None
+    return NLPController(
+        vectordb_client=vectordb_client,
+        generation_client=None,
+        embedding_client=embedding_client,
+    )
 
 
 if __name__ == "__main__":
     pdf_files = glob.glob("data/*.pdf")
 
     if not pdf_files:
-        print(" No PDF files found in the data/ folder.")
-        print("   → Put your PDF files in FastAPI_RAG/data/ and run again.")
+        print("No PDF files found in the data/ folder.")
+        print("→ Put your PDF files in FastAPI_RAG/data/ and run again.")
         exit(1)
 
-    print(f" Found {len(pdf_files)} PDF(s) to ingest: {[os.path.basename(f) for f in pdf_files]}")
+    print(f"Found {len(pdf_files)} PDF(s): {[os.path.basename(f) for f in pdf_files]}")
+
+    controller = build_controller()
+    first_file = True
 
     for pdf_path in pdf_files:
-        ingest_pdf(pdf_path)
+        filename = os.path.basename(pdf_path)
+        print(f"\nProcessing: {filename}")
 
-    print("\n Ingestion complete! Your data is now in MongoDB Atlas.")
-    print("   → Start the FastAPI server: uvicorn main:app --reload --port 8000")
+        text = extract_text_from_pdf(pdf_path)
+        if not text:
+            print(f"  No text found, skipping.")
+            continue
+
+        chunks = chunk_text(text)
+        print(f"  {len(text)} characters → {len(chunks)} chunks")
+
+        metadata_list = [{"source": filename} for _ in chunks]
+
+        # Reset collection only on the first file to clear old embeddings
+        controller.index_into_vector_db(
+            texts=chunks,
+            metadata_list=metadata_list,
+            do_reset=first_file,
+        )
+        first_file = False
+        print(f"  Inserted {len(chunks)} chunks")
+
+    print("\nIngestion complete! Run the server: uvicorn main:app --reload")
