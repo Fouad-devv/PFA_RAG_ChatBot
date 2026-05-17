@@ -144,6 +144,46 @@ class MongoDBAtlasProvider(VectorDBInterface):
         if batch:
             yield batch
 
+    # ── Admin helpers ────────────────────────────────────────────────────────
+
+    def list_documents_grouped(self, collection_name: str) -> list:
+        pipeline = [
+            {"$group": {"_id": "$metadata.source", "chunk_count": {"$sum": 1}}},
+            {"$project": {"source": "$_id", "chunk_count": 1, "_id": 0}},
+            {"$sort": {"source": 1}},
+        ]
+        return list(self.db[collection_name].aggregate(pipeline))
+
+    def delete_by_source(self, collection_name: str, source: str) -> int:
+        result = self.db[collection_name].delete_many({"metadata.source": source})
+        return result.deleted_count
+
+    def list_chunks(self, collection_name: str, search: str = None,
+                    skip: int = 0, limit: int = 20) -> dict:
+        query = {}
+        if search:
+            query["text"] = {"$regex": search, "$options": "i"}
+        total = self.db[collection_name].count_documents(query)
+        cursor = (
+            self.db[collection_name]
+            .find(query, {"embedding": 0})
+            .skip(skip)
+            .limit(limit)
+        )
+        chunks = []
+        for doc in cursor:
+            doc["_id"] = str(doc["_id"])
+            chunks.append(doc)
+        return {"total": total, "chunks": chunks}
+
+    def delete_chunk_by_id(self, collection_name: str, chunk_id: str) -> bool:
+        from bson import ObjectId
+        result = self.db[collection_name].delete_one({"_id": ObjectId(chunk_id)})
+        return result.deleted_count == 1
+
+    def count_chunks(self, collection_name: str) -> int:
+        return self.db[collection_name].count_documents({})
+
     def update_metadata(self, collection_name: str, point_ids: list, metadata_patch: dict) -> bool:
         if not point_ids or not metadata_patch:
             return True
