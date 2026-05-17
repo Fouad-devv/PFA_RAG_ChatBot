@@ -32,6 +32,7 @@ def chat(system_prompt: str, user_message: str, model: str = "llama-3.3-70b-vers
                 ],
                 max_tokens=1024,
                 temperature=0.3,
+                timeout=30,
             )
             return response.choices[0].message.content
         except Exception as e:
