@@ -5,7 +5,7 @@ import { useKeycloak } from '@react-keycloak/web';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { AdminRouteProtector } from './components/AdminProtecte';
 import { Landing } from './pages/landing/Landing';
-import { Public } from './pages/public/public';
+import { Public } from './pages/public/Public';
 import { Home } from './pages/home/Home';
 import { Admin } from './pages/admin/Admin';
 
