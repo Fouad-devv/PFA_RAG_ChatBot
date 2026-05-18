@@ -3,6 +3,7 @@ import { PublicSidebar } from "./PublicSidebar.jsx";
 import axios from "../../api/axios.js";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { AppLogo, AIAvatar } from "../../components/Logo.jsx";
 
 const STARTER_QUESTIONS = [
   { icon: "⚖️", text: "Quels sont les droits du salarié en cas de licenciement ?" },
@@ -108,12 +109,7 @@ export const Public = () => {
           {messages.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center gap-8 animate-fade-in">
               <div className="text-center">
-                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-400 to-emerald-600 mx-auto mb-5 flex items-center justify-center shadow-xl shadow-emerald-200">
-                  <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                      d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-3 3-3-3z" />
-                  </svg>
-                </div>
+                <AppLogo size="xl" className="mx-auto mb-5" />
                 <h2 className="text-2xl font-bold text-slate-800 mb-2">Comment puis-je vous aider ?</h2>
                 <p className="text-slate-400 text-sm">Posez n'importe quelle question — aucun compte requis.</p>
               </div>
@@ -192,9 +188,7 @@ export const Public = () => {
 
               {loadingResponse && (
                 <div className="flex gap-3 animate-fade-in">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-xs font-bold text-white flex-shrink-0 shadow-md shadow-emerald-100">
-                    AI
-                  </div>
+                  <AIAvatar className="w-8 h-8" />
                   <div className="bubble-ai px-5 py-4 rounded-2xl rounded-bl-none flex items-center gap-1.5">
                     {[0, 160, 320].map((d) => (
                       <div key={d} className="w-2 h-2 rounded-full bg-emerald-400 animate-bounce" style={{ animationDelay: `${d}ms` }} />

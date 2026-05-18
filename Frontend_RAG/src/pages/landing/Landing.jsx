@@ -1,5 +1,6 @@
 import { useKeycloak } from "@react-keycloak/web";
 import { useNavigate } from "react-router-dom";
+import { AppLogo, AIAvatar } from "../../components/Logo.jsx";
 
 const FEATURES = [
   {
@@ -9,8 +10,18 @@ const FEATURES = [
           d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
       </svg>
     ),
-    title: "Basé sur vos documents",
-    desc: "L'assistant puise dans une base de connaissances dédiée pour des réponses précises et contextuelles.",
+    title: "Textes officiels uniquement",
+    desc: "Chaque réponse est extraite directement des articles du Code du Travail Marocain (Loi 65-99) — aucune approximation.",
+  },
+  {
+    icon: (
+      <svg className="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
+          d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
+      </svg>
+    ),
+    title: "Français & عربي",
+    desc: "Posez vos questions en français ou en arabe — l'assistant détecte la langue et répond dans la même langue.",
   },
   {
     icon: (
@@ -19,20 +30,11 @@ const FEATURES = [
           d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
       </svg>
     ),
-    title: "Historique sécurisé",
-    desc: "Connectez-vous pour retrouver toutes vos conversations sauvegardées, à tout moment.",
-  },
-  {
-    icon: (
-      <svg className="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
-          d="M13 10V3L4 14h7v7l9-11h-7z" />
-      </svg>
-    ),
-    title: "Réponses instantanées",
-    desc: "Accès immédiat sans inscription. Testez le chatbot directement, aucun compte requis.",
+    title: "Historique des consultations",
+    desc: "Connectez-vous pour retrouver toutes vos consultations juridiques passées, sauvegardées en sécurité.",
   },
 ];
+
 
 export const Landing = () => {
   const { keycloak } = useKeycloak();
@@ -53,17 +55,61 @@ export const Landing = () => {
       {/* ── Dot grid overlay ── */}
       <div className="fixed inset-0 bg-dot-grid pointer-events-none" />
 
+      {/* ── Legal animated background ── */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+
+        {/* Rotating text rings */}
+        <svg
+          className="absolute inset-0 w-full h-full"
+          viewBox="0 0 1000 1000"
+          preserveAspectRatio="xMidYMid slice"
+          style={{ opacity: 0.065 }}
+        >
+          <defs>
+            <path id="r-outer" d="M500,500 m-430,0 a430,430 0 1,1 860,0 a430,430 0 1,1 -860,0"/>
+            <path id="r-mid"   d="M500,500 m-310,0 a310,310 0 1,1 620,0 a310,310 0 1,1 -620,0"/>
+            <path id="r-inner" d="M500,500 m-185,0 a185,185 0 1,1 370,0 a185,185 0 1,1 -370,0"/>
+          </defs>
+
+          {/* Outer ring — slow CW */}
+          <g className="ring-cw-90">
+            <text fill="#6ee7b7" fontSize="11" fontFamily="monospace" letterSpacing="3">
+              <textPath href="#r-outer">
+                {"Art. 231 · Loi 65-99 · Code du Travail Marocain · Art. 45 · § 78 · Droit du Travail · Art. 13 · مدونة الشغل · الفصل ٢٣١ · § 4 · Art. 17 · Art. 231 · Loi 65-99 · Code du Travail Marocain · Art. 45 · § 78 · Droit du Travail · Art. 13 · مدونة الشغل · الفصل ٢٣١ · § 4 · Art. 17 · "}
+              </textPath>
+            </text>
+          </g>
+
+          {/* Middle ring — CCW */}
+          <g className="ring-ccw-130">
+            <text fill="rgba(255,255,255,0.85)" fontSize="9" fontFamily="monospace" letterSpacing="2">
+              <textPath href="#r-mid">
+                {"المادة ٤٥ · عقد الشغل · رب العمل · الأجر · الفصل ١٣ · مدونة الشغل · Art. 78 · المادة ٢٣ · الحقوق · العمل · المادة ٤٥ · عقد الشغل · رب العمل · الأجر · الفصل ١٣ · مدونة الشغل · Art. 78 · المادة ٢٣ · الحقوق · العمل · "}
+              </textPath>
+            </text>
+          </g>
+
+          {/* Inner ring — faster CW */}
+          <g className="ring-cw-55">
+            <text fill="#6ee7b7" fontSize="8" fontFamily="monospace" letterSpacing="5">
+              <textPath href="#r-inner">
+                {"§ 231 · § 45 · § 13 · § 78 · § 4 · § 99 · § 17 · § 65 · § 231 · § 45 · § 13 · § 78 · § 4 · § 99 · § 17 · § 65 · § 231 · § 45 · § 13 · § 78 · "}
+              </textPath>
+            </text>
+          </g>
+
+          {/* Ring outlines */}
+          <circle cx="500" cy="500" r="430" fill="none" stroke="#10b981" strokeWidth="0.5" opacity="0.5"/>
+          <circle cx="500" cy="500" r="310" fill="none" stroke="#10b981" strokeWidth="0.4" opacity="0.4"/>
+          <circle cx="500" cy="500" r="185" fill="none" stroke="#10b981" strokeWidth="0.4" opacity="0.3"/>
+          <circle cx="500" cy="500" r="4"   fill="#10b981" opacity="0.5"/>
+        </svg>
+
+      </div>
+
       {/* ── Navbar ── */}
-      <nav className="relative z-10 flex items-center justify-between px-6 sm:px-12 lg:px-20 py-5 border-b border-white/[0.06]">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-500/30 glow-emerald-sm">
-            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-3 3-3-3z" />
-            </svg>
-          </div>
-          <span className="font-bold text-lg tracking-tight">RAG Assistant</span>
-        </div>
+      <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 sm:px-12 lg:px-20 py-3 border-b border-white/[0.06] bg-[#070a14]/80 backdrop-blur-md">
+        <AppLogo size="md" dark showText />
 
         <div className="flex items-center gap-2">
           <button
@@ -82,27 +128,27 @@ export const Landing = () => {
       </nav>
 
       {/* ── Hero ── */}
-      <main className="relative z-10 flex-1 flex flex-col items-center justify-center px-4 py-16 text-center">
+      <main className="relative z-10 flex-1 flex flex-col items-center justify-center px-4 pt-24 pb-16 text-center">
 
         {/* Badge */}
         <div className="animate-fade-in inline-flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 text-xs font-semibold px-4 py-2 rounded-full mb-10 backdrop-blur-sm">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-          Retrieval-Augmented Generation · Projet de Fin d'Année
+          Code du Travail Marocain · Loi 65-99 · Powered by RAG
         </div>
 
         {/* Headline */}
         <h1 className="animate-fade-in delay-100 text-5xl sm:text-6xl md:text-7xl font-black tracking-tight mb-7 leading-[1.06] max-w-4xl">
-          Votre assistant IA
+          Consultez le Code
           <br />
           <span className="bg-gradient-to-r from-emerald-300 via-emerald-400 to-teal-300 bg-clip-text text-transparent">
-            intelligent & précis
+            du Travail Marocain
           </span>
         </h1>
 
         {/* Subtitle */}
         <p className="animate-fade-in delay-200 text-slate-400 text-lg sm:text-xl max-w-xl mb-11 leading-relaxed">
-          Posez vos questions et obtenez des réponses précises grâce à la technologie RAG.
-          Sans compte ou avec historique complet.
+          Posez vos questions juridiques en français ou en arabe et obtenez des réponses
+          précises, sourcées directement dans les articles officiels.
         </p>
 
         {/* CTAs */}
@@ -130,7 +176,7 @@ export const Landing = () => {
         </div>
 
         <p className="text-slate-600 text-sm">
-          Sans compte · Gratuit · Aucune installation requise
+          Sans compte · Gratuit · Français & عربي
         </p>
 
         {/* ── Chat preview card ── */}
@@ -143,17 +189,15 @@ export const Landing = () => {
                 <div className="w-3 h-3 rounded-full bg-yellow-500/60" />
                 <div className="w-3 h-3 rounded-full bg-emerald-500/60" />
               </div>
-              <span className="text-xs text-slate-500 ml-2 font-medium">RAG Assistant — conversation</span>
+              <span className="text-xs text-slate-500 ml-2 font-medium">Assistant Juridique · Code du Travail Marocain</span>
             </div>
 
             {/* Mock chat */}
             <div className="p-5 space-y-4">
               <div className="flex gap-3 items-end">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-[11px] font-bold text-white flex-shrink-0">
-                  AI
-                </div>
+                <AIAvatar className="w-8 h-8" />
                 <div className="bg-white/[0.07] border border-white/[0.06] rounded-2xl rounded-bl-none px-4 py-3 text-sm text-slate-300 max-w-xs leading-relaxed">
-                  Bonjour ! Je suis votre assistant RAG. Comment puis-je vous aider ?
+                  Bonjour ! Je suis votre assistant juridique spécialisé dans le Code du Travail Marocain. Comment puis-je vous aider ?
                 </div>
               </div>
 
@@ -162,16 +206,14 @@ export const Landing = () => {
                   U
                 </div>
                 <div className="bg-emerald-500/15 border border-emerald-500/20 rounded-2xl rounded-br-none px-4 py-3 text-sm text-emerald-100 max-w-xs leading-relaxed">
-                  Explique-moi la technologie RAG en quelques mots.
+                  Combien de jours de congé annuel a droit un salarié ?
                 </div>
               </div>
 
               <div className="flex gap-3 items-end">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-[11px] font-bold text-white flex-shrink-0">
-                  AI
-                </div>
+                <AIAvatar className="w-8 h-8" />
                 <div className="bg-white/[0.07] border border-white/[0.06] rounded-2xl rounded-bl-none px-4 py-3 text-sm text-slate-300 max-w-sm leading-relaxed">
-                  RAG combine la recherche documentaire avec la génération par IA pour des réponses précises et ancrées dans vos données...
+                  Selon l'<span className="text-emerald-400 font-semibold">article 231</span> du Code du Travail, tout salarié a droit à un congé annuel payé équivalent à <span className="text-emerald-400 font-semibold">1,5 jour ouvrable</span> par mois de service...
                   <span className="inline-block w-1.5 h-4 bg-emerald-400 ml-1 animate-pulse align-middle rounded-sm" />
                 </div>
               </div>
@@ -180,7 +222,7 @@ export const Landing = () => {
             {/* Mock input */}
             <div className="px-5 pb-4">
               <div className="flex items-center gap-3 bg-white/[0.05] border border-white/[0.07] rounded-xl px-4 py-3">
-                <span className="text-slate-600 text-sm flex-1 text-left">Posez votre question…</span>
+                <span className="text-slate-600 text-sm flex-1 text-left">Posez votre question juridique…</span>
                 <div className="w-8 h-8 rounded-full bg-emerald-500/25 border border-emerald-500/30 flex items-center justify-center">
                   <svg className="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14m0 0l-6-6m6 6l-6 6" />
@@ -198,8 +240,8 @@ export const Landing = () => {
       {/* ── Features ── */}
       <section className="relative z-10 px-6 sm:px-12 lg:px-20 pb-20 max-w-6xl mx-auto w-full">
         <div className="text-center mb-10">
-          <p className="text-slate-500 text-sm font-semibold uppercase tracking-widest mb-2">Fonctionnalités</p>
-          <h2 className="text-2xl sm:text-3xl font-bold text-white">Tout ce dont vous avez besoin</h2>
+          <p className="text-slate-500 text-sm font-semibold uppercase tracking-widest mb-2">Pourquoi cet assistant ?</p>
+          <h2 className="text-2xl sm:text-3xl font-bold text-white">Vos droits, clairement expliqués</h2>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
@@ -220,7 +262,7 @@ export const Landing = () => {
 
       {/* ── Footer ── */}
       <footer className="relative z-10 border-t border-white/[0.05] px-6 py-5 text-center text-slate-600 text-sm">
-        RAG Assistant &nbsp;·&nbsp; Projet de Fin d'Année &nbsp;·&nbsp; {new Date().getFullYear()}
+        Assistant Juridique &nbsp;·&nbsp; Code du Travail Marocain &nbsp;·&nbsp; ENSA Béni Mellal &nbsp;·&nbsp; {new Date().getFullYear()}
       </footer>
 
     </div>

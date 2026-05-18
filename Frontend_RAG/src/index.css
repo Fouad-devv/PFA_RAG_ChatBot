@@ -131,8 +131,8 @@ textarea { scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent; }
 
 /* ─── Sidebar conversation item active ───────────────────────────────────── */
 .conv-item-active {
-  background: linear-gradient(135deg, #f0fdf4, #ecfdf5);
-  border-color: #a7f3d0;
+  background: rgba(16, 185, 129, 0.1);
+  border-color: rgba(16, 185, 129, 0.2);
 }
 
 /* ─── Input floating card ────────────────────────────────────────────────── */
@@ -149,3 +149,13 @@ textarea { scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent; }
 /* ─── Transitions ────────────────────────────────────────────────────────── */
 button { transition: all 0.18s ease; }
 input, textarea { transition: border-color 0.18s ease, box-shadow 0.18s ease; }
+
+/* ─── Legal background: rotating rings ───────────────────────────────────── */
+@keyframes ring-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+.ring-cw-90   { animation: ring-spin  90s linear infinite;         transform-origin: 500px 500px; }
+.ring-ccw-130 { animation: ring-spin 130s linear infinite reverse; transform-origin: 500px 500px; }
+.ring-cw-55   { animation: ring-spin  55s linear infinite;         transform-origin: 500px 500px; }
+

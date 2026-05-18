@@ -3,6 +3,7 @@ import { useKeycloak } from "@react-keycloak/web";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import { showToast } from "../../components/Toast";
+import { AppLogo, AIAvatar } from "../../components/Logo.jsx";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -144,12 +145,7 @@ const ChatWindow = ({
         {!activeConversation ? (
           /* Welcome screen */
           <div className="h-full flex flex-col items-center justify-center gap-6 py-20 animate-fade-in">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center shadow-xl shadow-emerald-200">
-              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                  d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-3 3-3-3z" />
-              </svg>
-            </div>
+            <AppLogo size="xl" />
             <div className="text-center">
               <h2 className="text-2xl font-bold text-slate-800 mb-2">
                 Bonjour, {username} 👋
@@ -169,12 +165,7 @@ const ChatWindow = ({
           /* Empty — starter questions */
           <div className="flex flex-col items-center justify-center gap-8 py-16 animate-fade-in">
             <div className="text-center">
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-400 to-emerald-600 mx-auto mb-4 flex items-center justify-center shadow-lg shadow-emerald-200">
-                <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                    d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-3 3-3-3z" />
-                </svg>
-              </div>
+              <AppLogo size="lg" className="mx-auto mb-4" />
               <h2 className="text-xl font-bold text-slate-800 mb-1.5">Comment puis-je vous aider ?</h2>
               <p className="text-slate-400 text-sm">Posez votre question ou choisissez une suggestion</p>
             </div>
@@ -211,9 +202,7 @@ const ChatWindow = ({
 
             {loadingResponse && (
               <div className="flex gap-3 animate-fade-in">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-xs font-bold text-white flex-shrink-0 shadow-md shadow-emerald-100">
-                  AI
-                </div>
+                <AIAvatar className="w-8 h-8" />
                 <div className="bubble-ai px-5 py-4 rounded-2xl rounded-bl-none flex items-center gap-1.5">
                   {[0, 160, 320].map((d) => (
                     <div key={d} className="w-2 h-2 rounded-full bg-emerald-400 animate-bounce" style={{ animationDelay: `${d}ms` }} />
@@ -304,13 +293,13 @@ const Bubble = ({ m, idx, username, copiedId, onCopy, canRegenerate, onRegenerat
   return (
     <div className={`flex gap-3 group animate-fade-in ${isUser ? "flex-row-reverse" : "flex-row"}`}>
       {/* Avatar */}
-      <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-sm ${
-        isUser
-          ? "bg-gradient-to-br from-green-600 to-slate-900"
-          : "bg-gradient-to-br from-emerald-400 to-emerald-600 shadow-emerald-100"
-      }`}>
-        {isUser ? username?.charAt(0).toUpperCase() : "AI"}
-      </div>
+      {isUser ? (
+        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-green-600 to-slate-900 flex items-center justify-center text-xs font-bold text-white shadow-sm">
+          {username?.charAt(0).toUpperCase()}
+        </div>
+      ) : (
+        <AIAvatar className="w-8 h-8" />
+      )}
 
       {/* Content */}
       <div className={`flex flex-col gap-1.5 min-w-0 ${isUser ? "max-w-[72%] items-end" : "max-w-[90%] sm:max-w-[72%] items-start"}`}>
