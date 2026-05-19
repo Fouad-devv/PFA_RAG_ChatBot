@@ -200,7 +200,7 @@ const ChatWindow = ({
               />
             ))}
 
-            {loadingResponse && (
+            {loadingResponse && !messages[messages.length - 1]?.streaming && (
               <div className="flex gap-3 animate-fade-in">
                 <AIAvatar className="w-8 h-8" />
                 <div className="bubble-ai px-5 py-4 rounded-2xl rounded-bl-none flex items-center gap-1.5">
@@ -285,6 +285,60 @@ const ChatWindow = ({
   );
 };
 
+/* ── Smooth typewriter for streaming responses ── */
+const TypewriterText = ({ content, streaming, rtl }) => {
+  const [shown, setShown] = useState(() => (streaming ? "" : content));
+  const ref = useRef({ content, streaming });
+  ref.current.content = content;
+  ref.current.streaming = streaming;
+
+  // When streaming stops (or content changes on a non-streaming message), show everything immediately
+  useEffect(() => {
+    if (!streaming) setShown(content);
+  }, [content, streaming]);
+
+  // Animation loop — starts once on mount for streaming messages
+  useEffect(() => {
+    if (!streaming) return;
+    let len = 0;
+    let alive = true;
+    let rafId;
+    const tick = () => {
+      if (!alive) return;
+      const { content: c, streaming: s } = ref.current;
+      if (!s) { setShown(c); return; }                     // stream ended → show rest instantly
+      if (len < c.length) {
+        const gap = c.length - len;
+        len = Math.min(len + (gap > 60 ? 8 : 3), c.length); // speed up when buffer is large
+        setShown(c.slice(0, len));
+      }
+      rafId = requestAnimationFrame(tick);
+    };
+    rafId = requestAnimationFrame(tick);
+    return () => { alive = false; cancelAnimationFrame(rafId); };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const mdComponents = {
+    p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+    strong: ({ children }) => <strong className="font-semibold text-emerald-700">{children}</strong>,
+    ul: ({ children }) => <ul className="list-disc list-inside space-y-1 my-2">{children}</ul>,
+    ol: ({ children }) => <ol className="list-decimal list-inside space-y-1 my-2">{children}</ol>,
+    li: ({ children }) => <li className={rtl ? "mr-2" : "ml-2"}>{children}</li>,
+  };
+
+  if (!shown && streaming) {
+    return <span className="inline-block w-2 h-4 bg-emerald-500 rounded-sm animate-pulse" />;
+  }
+
+  return (
+    <>
+      <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>{shown}</ReactMarkdown>
+      {streaming && <span className="inline-block w-[2px] h-[1em] bg-emerald-500 ml-0.5 align-middle animate-pulse" />}
+    </>
+  );
+};
+
+
 /* ── Single message bubble ── */
 const Bubble = ({ m, idx, username, copiedId, onCopy, canRegenerate, onRegenerate, loadingResponse }) => {
   const isUser = m.role === "user";
@@ -308,18 +362,7 @@ const Bubble = ({ m, idx, username, copiedId, onCopy, canRegenerate, onRegenerat
         }`}>
           {isUser ? m.content : (
             <div dir={rtl ? "rtl" : "ltr"}>
-              <ReactMarkdown
-                remarkPlugins={[remarkGfm]}
-                components={{
-                  p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
-                  strong: ({ children }) => <strong className="font-semibold text-emerald-700">{children}</strong>,
-                  ul: ({ children }) => <ul className="list-disc list-inside space-y-1 my-2">{children}</ul>,
-                  ol: ({ children }) => <ol className="list-decimal list-inside space-y-1 my-2">{children}</ol>,
-                  li: ({ children }) => <li className={rtl ? "mr-2" : "ml-2"}>{children}</li>,
-                }}
-              >
-                {m.content}
-              </ReactMarkdown>
+              <TypewriterText content={m.content ?? ""} streaming={!!m.streaming} rtl={rtl} />
             </div>
           )}
         </div>

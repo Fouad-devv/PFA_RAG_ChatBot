@@ -85,12 +85,73 @@ export const Home = () => {
   }, [username, axiosPrivate]);
 
 
+  // ── Shared SSE streaming helper ───────────────────────────────────────────
+  const streamToMessages = useCallback(async (message, conversationId, signal) => {
+    try { await keycloak.updateToken(30); } catch {}
+
+    const response = await fetch("http://localhost:5000/api/home/response-stream", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${keycloak.token}`,
+      },
+      body: JSON.stringify({ message, conversationId }),
+      signal,
+    });
+
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    let fullAnswer = "";
+    let conversationTitle = "";
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const eventBlocks = buffer.split('\n\n');
+      buffer = eventBlocks.pop();
+
+      for (const block of eventBlocks) {
+        const dataLine = block.split('\n').find((l) => l.startsWith('data: '));
+        if (!dataLine) continue;
+        try {
+          const data = JSON.parse(dataLine.slice(6));
+          if (data.type === 'token') {
+            fullAnswer += data.token;
+            const snapshot = fullAnswer;
+            setMessages((prev) => {
+              const msgs = [...prev];
+              const last = msgs[msgs.length - 1];
+              if (last?.role === 'assistant' && last.streaming) {
+                return [...msgs.slice(0, -1), { ...last, content: snapshot }];
+              }
+              return msgs;
+            });
+          } else if ((data.type === 'meta' || data.type === 'done') && data.title) {
+            conversationTitle = data.title;
+          }
+        } catch {}
+      }
+    }
+
+    return { fullAnswer, conversationTitle };
+  }, [keycloak]);
+
+
   // ── Send message ──────────────────────────────────────────────────────────
   const handleSendMessage = useCallback(async () => {
     if (!newMessage.trim() || !activeConversation || loadingResponse) return;
 
-    const userMsg = { role: "user", content: newMessage, createdAt: new Date() };
-    setMessages((prev) => [...prev, userMsg]);
+    const messageToSend = newMessage;
+    setMessages((prev) => [
+      ...prev,
+      { role: "user", content: messageToSend, createdAt: new Date() },
+      { role: "assistant", content: "", createdAt: new Date(), streaming: true },
+    ]);
     setNewMessage("");
     setLoadingResponse(true);
 
@@ -98,58 +159,78 @@ export const Home = () => {
     abortControllerRef.current = controller;
 
     try {
-      const res = await axiosPrivate.post("/api/home/response", {
-        message: newMessage,
-        conversationId: activeConversation._id,
-      }, { signal: controller.signal });
-
-      setMessages((prev) => [...prev, { role: "assistant", content: res.data.answer, createdAt: new Date() }]);
+      const { fullAnswer, conversationTitle } = await streamToMessages(messageToSend, activeConversation._id, controller.signal);
       setConversations((prev) =>
         prev.map((c) =>
           c._id === activeConversation._id
-            ? { ...c, title: res.data.title, lastMessagePreview: res.data.answer, updatedAt: new Date() }
+            ? { ...c, title: conversationTitle || c.title, lastMessagePreview: fullAnswer.substring(0, 60), updatedAt: new Date() }
             : c
         )
       );
-      setActiveConversation((prev) => ({ ...prev, title: res.data.title || prev.title }));
+      setActiveConversation((prev) => ({ ...prev, title: conversationTitle || prev.title }));
     } catch (err) {
-      if (err.name !== "CanceledError" && err.code !== "ERR_CANCELED") {
+      if (err.name !== "AbortError") {
         console.error("Failed to send message", err);
+        setMessages((prev) => {
+          const msgs = [...prev];
+          const last = msgs[msgs.length - 1];
+          if (last?.role === 'assistant' && last.streaming) {
+            return [...msgs.slice(0, -1), { ...last, content: "Une erreur est survenue.", streaming: false }];
+          }
+          return msgs;
+        });
       }
     } finally {
+      setMessages((prev) => {
+        const msgs = [...prev];
+        const last = msgs[msgs.length - 1];
+        if (last?.role === 'assistant' && last.streaming) {
+          return [...msgs.slice(0, -1), { ...last, streaming: false }];
+        }
+        return msgs;
+      });
       setLoadingResponse(false);
     }
-  }, [newMessage, activeConversation, axiosPrivate, loadingResponse]);
+  }, [newMessage, activeConversation, loadingResponse, streamToMessages]);
 
 
   // ── Starter question shortcut ─────────────────────────────────────────────
   const handleStarterQuestion = useCallback(async (question) => {
     if (!activeConversation || loadingResponse) return;
-    setMessages((prev) => [...prev, { role: "user", content: question, createdAt: new Date() }]);
+
+    setMessages((prev) => [
+      ...prev,
+      { role: "user", content: question, createdAt: new Date() },
+      { role: "assistant", content: "", createdAt: new Date(), streaming: true },
+    ]);
     setLoadingResponse(true);
 
     const controller = new AbortController();
     abortControllerRef.current = controller;
 
     try {
-      const res = await axiosPrivate.post("/api/home/response", {
-        message: question,
-        conversationId: activeConversation._id,
-      }, { signal: controller.signal });
-      setMessages((prev) => [...prev, { role: "assistant", content: res.data.answer, createdAt: new Date() }]);
+      const { fullAnswer, conversationTitle } = await streamToMessages(question, activeConversation._id, controller.signal);
       setConversations((prev) =>
         prev.map((c) =>
           c._id === activeConversation._id
-            ? { ...c, title: res.data.title, lastMessagePreview: res.data.answer, updatedAt: new Date() }
+            ? { ...c, title: conversationTitle || c.title, lastMessagePreview: fullAnswer.substring(0, 60), updatedAt: new Date() }
             : c
         )
       );
-      setActiveConversation((prev) => ({ ...prev, title: res.data.title || prev.title }));
-    } catch {
-    } finally {
+      setActiveConversation((prev) => ({ ...prev, title: conversationTitle || prev.title }));
+    } catch {}
+    finally {
+      setMessages((prev) => {
+        const msgs = [...prev];
+        const last = msgs[msgs.length - 1];
+        if (last?.role === 'assistant' && last.streaming) {
+          return [...msgs.slice(0, -1), { ...last, streaming: false }];
+        }
+        return msgs;
+      });
       setLoadingResponse(false);
     }
-  }, [activeConversation, axiosPrivate, loadingResponse]);
+  }, [activeConversation, loadingResponse, streamToMessages]);
 
 
   // ── Rename conversation ───────────────────────────────────────────────────
@@ -177,7 +258,8 @@ export const Home = () => {
 
     setMessages((prev) => {
       const lastAiIdx = [...prev.keys()].reverse().find((i) => prev[i].role === "assistant");
-      return lastAiIdx !== undefined ? prev.filter((_, i) => i !== lastAiIdx) : prev;
+      const filtered = lastAiIdx !== undefined ? prev.filter((_, i) => i !== lastAiIdx) : prev;
+      return [...filtered, { role: "assistant", content: "", createdAt: new Date(), streaming: true }];
     });
 
     setLoadingResponse(true);
@@ -186,19 +268,30 @@ export const Home = () => {
     abortControllerRef.current = controller;
 
     try {
-      const res = await axiosPrivate.post("/api/home/response", {
-        message: lastUserMsg.content,
-        conversationId: activeConversation._id,
-      }, { signal: controller.signal });
-      setMessages((prev) => [...prev, { role: "assistant", content: res.data.answer, createdAt: new Date() }]);
+      await streamToMessages(lastUserMsg.content, activeConversation._id, controller.signal);
     } catch (err) {
-      if (err.name !== "CanceledError" && err.code !== "ERR_CANCELED") {
-        setMessages((prev) => [...prev, { role: "assistant", content: "Une erreur est survenue.", createdAt: new Date() }]);
+      if (err.name !== "AbortError") {
+        setMessages((prev) => {
+          const msgs = [...prev];
+          const last = msgs[msgs.length - 1];
+          if (last?.role === 'assistant' && last.streaming) {
+            return [...msgs.slice(0, -1), { ...last, content: "Une erreur est survenue.", streaming: false }];
+          }
+          return msgs;
+        });
       }
     } finally {
+      setMessages((prev) => {
+        const msgs = [...prev];
+        const last = msgs[msgs.length - 1];
+        if (last?.role === 'assistant' && last.streaming) {
+          return [...msgs.slice(0, -1), { ...last, streaming: false }];
+        }
+        return msgs;
+      });
       setLoadingResponse(false);
     }
-  }, [messages, activeConversation, axiosPrivate, loadingResponse]);
+  }, [messages, activeConversation, loadingResponse, streamToMessages]);
 
 
   // ── Stop generation ───────────────────────────────────────────────────────

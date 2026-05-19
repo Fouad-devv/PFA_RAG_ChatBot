@@ -3,9 +3,10 @@ import express from "express";
 
 const router = express.Router();
 
-import { handGetResponse, handGetHistory, handGetConversation, handleNewConversation, handleDeleteConversation, handleRenameConversation } from "../controllers/homeController.js";
+import { handGetResponse, handGetResponseStream, handGetHistory, handGetConversation, handleNewConversation, handleDeleteConversation, handleRenameConversation } from "../controllers/homeController.js";
 
 router.post('/response', handGetResponse);
+router.post('/response-stream', handGetResponseStream);
 router.post('/newChat', handleNewConversation);
 router.get('/conversations', handGetHistory);
 router.get('/conversations/:conversationId', handGetConversation);

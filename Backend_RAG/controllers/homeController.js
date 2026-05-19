@@ -231,6 +231,102 @@ export const handleNewConversation = async (req, res) => {
 
 
 
+// ________________ Stream response for a user message _____________________________
+export const handGetResponseStream = async (req, res) => {
+  try {
+    const userId = req.userId;
+    const { message, conversationId } = req.body;
+
+    if (!message || message.trim().length === 0) {
+      return res.status(400).json({ error: 'Message is required' });
+    }
+
+    let user = await User.findOne({ userId });
+    if (!user) {
+      user = await User.create({ userId, email: req.email || '', username: req.username || '', roles: req.roles });
+    }
+
+    let conversation;
+    if (!conversationId) {
+      const title = isGreeting(message) ? "New Conversation" : await generateTitle(message);
+      conversation = await Conversation.create({ userId: user._id, title, lastMessagePreview: "" });
+    } else {
+      conversation = await Conversation.findOne({ _id: conversationId, userId: user._id });
+      if (!conversation) return res.status(404).json({ error: "Conversation not found" });
+      if (conversation.title === "New Conversation" && !isGreeting(message)) {
+        conversation.title = await generateTitle(message);
+      }
+    }
+
+    await Message.create({ conversationId: conversation._id, userId: user._id, role: "user", content: message });
+
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+    res.flushHeaders();
+
+    res.write(`data: ${JSON.stringify({ type: 'meta', conversationId: conversation._id.toString(), title: conversation.title })}\n\n`);
+
+    const ragRes = await fetch(`${process.env.FASTAPI_URL || "http://localhost:8000"}/rag/stream`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question: message }),
+    });
+
+    let fullAnswer = "";
+    const reader = ragRes.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const eventBlocks = buffer.split('\n\n');
+      buffer = eventBlocks.pop();
+
+      for (const block of eventBlocks) {
+        if (!block.trim()) continue;
+        const lines = block.split('\n');
+        let eventType = '';
+        let dataStr = '';
+        for (const line of lines) {
+          if (line.startsWith('event: ')) eventType = line.slice(7).trim();
+          else if (line.startsWith('data: ')) dataStr = line.slice(6);
+        }
+        if ((eventType === 'token' || eventType === 'greeting') && dataStr) {
+          try {
+            const token = JSON.parse(dataStr).text || '';
+            if (token) {
+              fullAnswer += token;
+              res.write(`data: ${JSON.stringify({ type: 'token', token })}\n\n`);
+            }
+          } catch {}
+        }
+      }
+    }
+
+    await Message.create({ conversationId: conversation._id, userId: user._id, role: "assistant", content: fullAnswer });
+    conversation.lastMessagePreview = fullAnswer.substring(0, 60);
+    await conversation.save();
+
+    res.write(`data: ${JSON.stringify({ type: 'done', title: conversation.title })}\n\n`);
+    res.end();
+
+  } catch (err) {
+    console.error(err);
+    if (!res.headersSent) {
+      res.status(500).json({ error: "Server error" });
+    } else {
+      res.write(`data: ${JSON.stringify({ type: 'error' })}\n\n`);
+      res.end();
+    }
+  }
+};
+
+
 // ____________________________ Delete a conversation ____________________________
 export const handleDeleteConversation = async (req, res) => {
 
