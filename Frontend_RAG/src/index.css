@@ -91,16 +91,23 @@ textarea { scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent; }
   0%, 49% { opacity: 1; }
   50%, 100% { opacity: 0; }
 }
-.cursor-blink {
+
+/* Inline cursor after the last word — works when last child is a <p> */
+.streaming-msg > p:last-child            { display: inline; }
+.streaming-msg > p:not(:last-child)      { display: block; }
+.streaming-msg::after {
+  content: '';
   display: inline-block;
   width: 2px;
-  height: 1.1em;
+  height: 1.15em;
   background-color: #10b981;
-  margin-left: 2px;
-  vertical-align: middle;
   border-radius: 1px;
-  animation: cursor-blink 0.7s step-start infinite;
+  margin-left: 3px;
+  vertical-align: middle;
+  animation: cursor-blink 0.65s step-start infinite;
 }
+
+/* Fallback block cursor when message content is still empty */
 .cursor-block {
   display: inline-block;
   width: 9px;
@@ -108,7 +115,7 @@ textarea { scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent; }
   background-color: #10b981;
   border-radius: 2px;
   vertical-align: middle;
-  animation: cursor-blink 0.7s step-start infinite;
+  animation: cursor-blink 0.65s step-start infinite;
 }
 
 /* ─── Markdown fade-in after streaming completes ─────────────────────────── */

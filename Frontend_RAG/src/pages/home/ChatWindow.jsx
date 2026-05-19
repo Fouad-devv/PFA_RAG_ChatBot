@@ -6,6 +6,7 @@ import { showToast } from "../../components/Toast";
 import { AppLogo, AIAvatar } from "../../components/Logo.jsx";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import TypewriterText from "../../components/TypewriterText.jsx";
 
 dayjs.extend(relativeTime);
 
@@ -54,16 +55,22 @@ const ChatWindow = ({
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages.length]);
 
-  // While streaming, keep scrolling to bottom at animation rate
+  // While streaming, follow the cursor every animation frame
   useEffect(() => {
     if (!loadingResponse) return;
-    const el = chatContainerRef.current;
-    if (!el) return;
-    const id = setInterval(() => {
-      const gap = el.scrollHeight - el.scrollTop - el.clientHeight;
-      if (gap < 200) el.scrollTop = el.scrollHeight; // follow cursor unless user scrolled up
-    }, 40);
-    return () => clearInterval(id);
+    let alive = true;
+    const tick = () => {
+      if (!alive) return;
+      const el = chatContainerRef.current;
+      if (el) {
+        const gap = el.scrollHeight - el.scrollTop - el.clientHeight;
+        // Scroll down unless the user deliberately scrolled up more than 400 px
+        if (gap < 400) el.scrollTop = el.scrollHeight;
+      }
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+    return () => { alive = false; };
   }, [loadingResponse]);
 
   const handleScroll = useCallback(() => {
@@ -297,79 +304,6 @@ const ChatWindow = ({
   );
 };
 
-/* ── Smooth word-by-word typewriter for streaming responses ── */
-const nextWordEnd = (text, from) => {
-  let i = from;
-  while (i < text.length && text[i] === ' ') i++;          // skip leading spaces
-  while (i < text.length && text[i] !== ' ' && text[i] !== '\n') i++; // consume word
-  if (i < text.length) i++;                                 // include trailing space / newline
-  return i;
-};
-
-const TypewriterText = ({ content, streaming, rtl }) => {
-  const [shown, setShown] = useState(() => (streaming ? "" : content));
-  const [done, setDone]   = useState(!streaming);
-  const wasStreaming       = useRef(streaming);
-  const ref                = useRef({ content, streaming });
-  ref.current.content   = content;
-  ref.current.streaming = streaming;
-
-  // Finalize immediately when streaming prop flips to false externally
-  useEffect(() => {
-    if (!streaming) { setShown(content); setDone(true); }
-  }, [content, streaming]);
-
-  // Word-by-word interval — fires every 28 ms (≈ 35 words/sec natural pace)
-  useEffect(() => {
-    if (!streaming) return;
-    const lenRef = { current: 0 };
-
-    const id = setInterval(() => {
-      const { content: c, streaming: s } = ref.current;
-
-      if (!s) {
-        // Stream ended → show everything at once and switch to formatted markdown
-        setShown(c);
-        setDone(true);
-        clearInterval(id);
-        return;
-      }
-
-      if (lenRef.current < c.length) {
-        lenRef.current = nextWordEnd(c, lenRef.current);
-        setShown(c.slice(0, lenRef.current));
-      }
-    }, 28);
-
-    return () => clearInterval(id);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const mdComponents = {
-    p:      ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
-    strong: ({ children }) => <strong className="font-semibold text-emerald-700">{children}</strong>,
-    ul:     ({ children }) => <ul className="list-disc list-inside space-y-1 my-2">{children}</ul>,
-    ol:     ({ children }) => <ol className="list-decimal list-inside space-y-1 my-2">{children}</ol>,
-    li:     ({ children }) => <li className={rtl ? "mr-2" : "ml-2"}>{children}</li>,
-  };
-
-  // Stream complete → formatted markdown fades in smoothly
-  if (done) {
-    return (
-      <div className={wasStreaming.current ? "animate-fade-only" : ""}>
-        <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>{shown}</ReactMarkdown>
-      </div>
-    );
-  }
-
-  // Streaming → plain text (no broken markdown mid-stream) + blinking cursor
-  if (!shown) return <span className="cursor-block" />;
-
-  return (
-    <span style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
-      {shown}<span className="cursor-blink" />
-    </span>
-  );
-};
 
 
 /* ── Single message bubble ── */
@@ -393,11 +327,10 @@ const Bubble = ({ m, idx, username, copiedId, onCopy, canRegenerate, onRegenerat
         <div className={`w-full px-4 py-3 rounded-2xl text-[15px] leading-relaxed [overflow-wrap:anywhere] ${
           isUser ? "bubble-user rounded-br-none" : "bubble-ai rounded-bl-none"
         }`}>
-          {isUser ? m.content : (
-            <div dir={rtl ? "rtl" : "ltr"}>
-              <TypewriterText content={m.content ?? ""} streaming={!!m.streaming} rtl={rtl} />
-            </div>
-          )}
+          {isUser
+            ? m.content
+            : <TypewriterText content={m.content ?? ""} streaming={!!m.streaming} rtl={rtl} />
+          }
         </div>
 
         {/* Meta: timestamp + actions */}

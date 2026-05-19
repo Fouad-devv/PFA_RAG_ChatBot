@@ -1,9 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { PublicSidebar } from "./PublicSidebar.jsx";
-import axios from "../../api/axios.js";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 import { AppLogo, AIAvatar } from "../../components/Logo.jsx";
+import TypewriterText from "../../components/TypewriterText.jsx";
 
 const STARTER_QUESTIONS = [
   { icon: "⚖️", text: "Quels sont les droits du salarié en cas de licenciement ?" },
@@ -12,30 +10,51 @@ const STARTER_QUESTIONS = [
   { icon: "📋", text: "Quelles sont les obligations de l'employeur envers le salarié ?" },
 ];
 
+const BASE_URL = "http://localhost:5000";
+
 export const Public = () => {
-  const [messages, setMessages] = useState([]);
-  const [newMessage, setNewMessage] = useState("");
+  const [messages, setMessages]           = useState([]);
+  const [newMessage, setNewMessage]       = useState("");
   const [loadingResponse, setLoadingResponse] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [copiedIdx, setCopiedIdx] = useState(null);
-  const messagesEndRef = useRef(null);
-  const chatContainerRef = useRef(null);
-  const textareaRef = useRef(null);
+  const [sidebarOpen, setSidebarOpen]     = useState(false);
+  const [copiedIdx, setCopiedIdx]         = useState(null);
+  const messagesEndRef    = useRef(null);
+  const chatContainerRef  = useRef(null);
+  const textareaRef       = useRef(null);
   const abortControllerRef = useRef(null);
 
-  const scrollToBottom = useCallback(() =>
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), []);
-
+  // Scroll when a new message is added
   useEffect(() => {
     if (messages.length === 0) return;
-    scrollToBottom();
-  }, [messages, scrollToBottom]);
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages.length]);
+
+  // Follow cursor every animation frame while streaming
+  useEffect(() => {
+    if (!loadingResponse) return;
+    let alive = true;
+    const tick = () => {
+      if (!alive) return;
+      const el = chatContainerRef.current;
+      if (el) {
+        const gap = el.scrollHeight - el.scrollTop - el.clientHeight;
+        if (gap < 400) el.scrollTop = el.scrollHeight;
+      }
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+    return () => { alive = false; };
+  }, [loadingResponse]);
 
   const sendMessage = async (text) => {
     const msg = text.trim();
     if (!msg || loadingResponse) return;
 
-    setMessages((p) => [...p, { role: "user", content: msg }]);
+    setMessages((p) => [
+      ...p,
+      { role: "user", content: msg },
+      { role: "assistant", content: "", streaming: true },
+    ]);
     setNewMessage("");
     if (textareaRef.current) textareaRef.current.style.height = "28px";
     setLoadingResponse(true);
@@ -44,13 +63,63 @@ export const Public = () => {
     abortControllerRef.current = controller;
 
     try {
-      const res = await axios.post("/api/public/response", { message: msg }, { signal: controller.signal });
-      setMessages((p) => [...p, { role: "assistant", content: res.data.answer }]);
+      const response = await fetch(`${BASE_URL}/api/public/response-stream`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: msg }),
+        signal: controller.signal,
+      });
+
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+      const reader  = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer    = "";
+      let fullAnswer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const eventBlocks = buffer.split('\n\n');
+        buffer = eventBlocks.pop();
+        for (const block of eventBlocks) {
+          const dataLine = block.split('\n').find((l) => l.startsWith('data: '));
+          if (!dataLine) continue;
+          try {
+            const data = JSON.parse(dataLine.slice(6));
+            if (data.type === 'token') {
+              fullAnswer += data.token;
+              const snapshot = fullAnswer;
+              setMessages((p) => {
+                const msgs = [...p];
+                const last = msgs[msgs.length - 1];
+                if (last?.role === 'assistant' && last.streaming)
+                  return [...msgs.slice(0, -1), { ...last, content: snapshot }];
+                return msgs;
+              });
+            }
+          } catch {}
+        }
+      }
     } catch (err) {
-      if (err.name !== "CanceledError" && err.code !== "ERR_CANCELED") {
-        setMessages((p) => [...p, { role: "assistant", content: "Oops ! Une erreur est survenue. Réessayez." }]);
+      if (err.name !== "AbortError") {
+        setMessages((p) => {
+          const msgs = [...p];
+          const last = msgs[msgs.length - 1];
+          if (last?.role === 'assistant' && last.streaming)
+            return [...msgs.slice(0, -1), { ...last, content: "Oops ! Une erreur est survenue. Réessayez.", streaming: false }];
+          return msgs;
+        });
       }
     } finally {
+      setMessages((p) => {
+        const msgs = [...p];
+        const last = msgs[msgs.length - 1];
+        if (last?.role === 'assistant' && last.streaming)
+          return [...msgs.slice(0, -1), { ...last, streaming: false }];
+        return msgs;
+      });
       setLoadingResponse(false);
     }
   };
@@ -90,7 +159,9 @@ export const Public = () => {
           <div className="flex-1 min-w-0">
             <h1 className="font-bold text-slate-900 text-[15px]">Chat public</h1>
             <p className="text-[11px] text-slate-400 mt-0.5">
-              {messages.length > 0 ? `${messages.length} message${messages.length > 1 ? "s" : ""}` : "Sans compte requis"}
+              {messages.length > 0
+                ? `${messages.length} message${messages.length > 1 ? "s" : ""}`
+                : "Sans compte requis"}
             </p>
           </div>
 
@@ -113,7 +184,6 @@ export const Public = () => {
                 <h2 className="text-2xl font-bold text-slate-800 mb-2">Comment puis-je vous aider ?</h2>
                 <p className="text-slate-400 text-sm">Posez n'importe quelle question — aucun compte requis.</p>
               </div>
-
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-lg animate-fade-in delay-100">
                 {STARTER_QUESTIONS.map((q) => (
                   <button
@@ -131,7 +201,7 @@ export const Public = () => {
             <>
               {messages.map((m, idx) => {
                 const isUser = m.role === "user";
-                const rtl = /[؀-ۿ]/.test(m.content ?? "");
+                const rtl    = /[؀-ۿ]/.test(m.content ?? "");
                 return (
                   <div key={idx} className={`flex gap-3 group animate-fade-in ${isUser ? "flex-row-reverse" : "flex-row"}`}>
                     {/* Avatar */}
@@ -140,7 +210,7 @@ export const Public = () => {
                         ? "bg-gradient-to-br from-green-700 to-slate-900"
                         : "bg-gradient-to-br from-emerald-400 to-emerald-600 shadow-emerald-100"
                     }`}>
-                      {isUser ? "G" : "AI"}
+                      {isUser ? "G" : <AIAvatar className="w-8 h-8" />}
                     </div>
 
                     {/* Bubble + actions */}
@@ -148,54 +218,34 @@ export const Public = () => {
                       <div className={`w-full px-4 py-3 rounded-2xl text-[15px] leading-relaxed [overflow-wrap:anywhere] ${
                         isUser ? "bubble-user rounded-br-none" : "bubble-ai rounded-bl-none"
                       }`}>
-                        {isUser ? m.content : (
-                          <div dir={rtl ? "rtl" : "ltr"}>
-                            <ReactMarkdown
-                              remarkPlugins={[remarkGfm]}
-                              components={{
-                                p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
-                                strong: ({ children }) => <strong className="font-semibold text-emerald-700">{children}</strong>,
-                                ul: ({ children }) => <ul className="list-disc list-inside space-y-1 my-2">{children}</ul>,
-                                ol: ({ children }) => <ol className="list-decimal list-inside space-y-1 my-2">{children}</ol>,
-                                li: ({ children }) => <li className={rtl ? "mr-2" : "ml-2"}>{children}</li>,
-                              }}
-                            >
-                              {m.content}
-                            </ReactMarkdown>
-                          </div>
-                        )}
+                        {isUser
+                          ? m.content
+                          : <TypewriterText content={m.content ?? ""} streaming={!!m.streaming} rtl={rtl} />
+                        }
                       </div>
 
                       {/* Copy */}
-                      <button
-                        onClick={() => copyMsg(m.content, idx)}
-                        className={`flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-lg transition-all ${
-                          copiedIdx === idx
-                            ? "text-emerald-600 bg-emerald-50"
-                            : "text-slate-400 hover:text-slate-600 hover:bg-slate-100 opacity-0 group-hover:opacity-100"
-                        }`}
-                      >
-                        {copiedIdx === idx ? (
-                          <><svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7"/></svg>Copié</>
-                        ) : (
-                          <><svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>Copier</>
-                        )}
-                      </button>
+                      {!m.streaming && (
+                        <button
+                          onClick={() => copyMsg(m.content, idx)}
+                          className={`flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-lg transition-all ${
+                            copiedIdx === idx
+                              ? "text-emerald-600 bg-emerald-50"
+                              : "text-slate-400 hover:text-slate-600 hover:bg-slate-100 opacity-0 group-hover:opacity-100"
+                          }`}
+                        >
+                          {copiedIdx === idx ? (
+                            <><svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7"/></svg>Copié</>
+                          ) : (
+                            <><svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>Copier</>
+                          )}
+                        </button>
+                      )}
                     </div>
                   </div>
                 );
               })}
 
-              {loadingResponse && (
-                <div className="flex gap-3 animate-fade-in">
-                  <AIAvatar className="w-8 h-8" />
-                  <div className="bubble-ai px-5 py-4 rounded-2xl rounded-bl-none flex items-center gap-1.5">
-                    {[0, 160, 320].map((d) => (
-                      <div key={d} className="w-2 h-2 rounded-full bg-emerald-400 animate-bounce" style={{ animationDelay: `${d}ms` }} />
-                    ))}
-                  </div>
-                </div>
-              )}
               <div ref={messagesEndRef} />
             </>
           )}
