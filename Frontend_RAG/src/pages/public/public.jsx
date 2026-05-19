@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 import { PublicSidebar } from "./PublicSidebar.jsx";
 import { AppLogo, AIAvatar } from "../../components/Logo.jsx";
 import TypewriterText from "../../components/TypewriterText.jsx";
@@ -22,29 +22,25 @@ export const Public = () => {
   const chatContainerRef  = useRef(null);
   const textareaRef       = useRef(null);
   const abortControllerRef = useRef(null);
+  const userScrolledRef   = useRef(false);
 
   // Scroll when a new message is added
   useEffect(() => {
     if (messages.length === 0) return;
+    userScrolledRef.current = false;
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages.length]);
 
-  // Follow cursor every animation frame while streaming
+  // Auto-scroll on any DOM content change (covers server stream + TypewriterText animation)
   useEffect(() => {
-    if (!loadingResponse) return;
-    let alive = true;
-    const tick = () => {
-      if (!alive) return;
-      const el = chatContainerRef.current;
-      if (el) {
-        const gap = el.scrollHeight - el.scrollTop - el.clientHeight;
-        if (gap < 400) el.scrollTop = el.scrollHeight;
-      }
-      requestAnimationFrame(tick);
-    };
-    requestAnimationFrame(tick);
-    return () => { alive = false; };
-  }, [loadingResponse]);
+    const container = chatContainerRef.current;
+    if (!container) return;
+    const mo = new MutationObserver(() => {
+      if (!userScrolledRef.current) container.scrollTop = container.scrollHeight;
+    });
+    mo.observe(container, { childList: true, subtree: true });
+    return () => mo.disconnect();
+  }, []);
 
   const sendMessage = async (text) => {
     const msg = text.trim();
@@ -175,12 +171,19 @@ export const Public = () => {
         <div
           ref={chatContainerRef}
           onClick={() => setSidebarOpen(false)}
+          onScroll={() => {
+            const el = chatContainerRef.current;
+            if (!el) return;
+            userScrolledRef.current = (el.scrollHeight - el.scrollTop - el.clientHeight) > 80;
+          }}
           className="flex-1 overflow-y-auto custom-scrollbar bg-slate-50 px-4 md:px-10 lg:px-20 xl:px-36 py-8 space-y-5"
         >
           {messages.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center gap-8 animate-fade-in">
               <div className="text-center">
-                <AppLogo size="xl" className="mx-auto mb-5" />
+                <div className="flex justify-center mb-5">
+                  <AppLogo size="xl" />
+                </div>
                 <h2 className="text-2xl font-bold text-slate-800 mb-2">Comment puis-je vous aider ?</h2>
                 <p className="text-slate-400 text-sm">Posez n'importe quelle question — aucun compte requis.</p>
               </div>

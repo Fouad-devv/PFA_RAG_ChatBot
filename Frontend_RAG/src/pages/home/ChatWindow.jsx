@@ -41,10 +41,12 @@ const ChatWindow = ({
   const messagesEndRef  = useRef(null);
   const [showScrollBtn, setShowScrollBtn] = useState(false);
   const [copiedId, setCopiedId]           = useState(null);
+  const userScrolledRef  = useRef(false);
 
   // Scroll to bottom instantly when a conversation finishes loading
   useEffect(() => {
     if (!loadingMessages) {
+      userScrolledRef.current = false;
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }
   }, [loadingMessages]);
@@ -52,31 +54,27 @@ const ChatWindow = ({
   // Scroll when a new message is added
   useEffect(() => {
     if (messages.length === 0) return;
+    userScrolledRef.current = false;
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages.length]);
 
-  // While streaming, follow the cursor every animation frame
+  // Auto-scroll on any DOM content change (covers server stream + TypewriterText animation)
   useEffect(() => {
-    if (!loadingResponse) return;
-    let alive = true;
-    const tick = () => {
-      if (!alive) return;
-      const el = chatContainerRef.current;
-      if (el) {
-        const gap = el.scrollHeight - el.scrollTop - el.clientHeight;
-        // Scroll down unless the user deliberately scrolled up more than 400 px
-        if (gap < 400) el.scrollTop = el.scrollHeight;
-      }
-      requestAnimationFrame(tick);
-    };
-    requestAnimationFrame(tick);
-    return () => { alive = false; };
-  }, [loadingResponse]);
+    const container = chatContainerRef.current;
+    if (!container) return;
+    const mo = new MutationObserver(() => {
+      if (!userScrolledRef.current) container.scrollTop = container.scrollHeight;
+    });
+    mo.observe(container, { childList: true, subtree: true });
+    return () => mo.disconnect();
+  }, []);
 
   const handleScroll = useCallback(() => {
     const el = chatContainerRef.current;
     if (!el) return;
-    setShowScrollBtn(el.scrollHeight - el.scrollTop - el.clientHeight > 160);
+    const gap = el.scrollHeight - el.scrollTop - el.clientHeight;
+    setShowScrollBtn(gap > 160);
+    userScrolledRef.current = gap > 80;
   }, []);
 
   const scrollToBottom = () => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
