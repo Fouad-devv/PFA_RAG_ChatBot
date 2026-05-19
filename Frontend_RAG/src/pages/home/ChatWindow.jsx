@@ -48,11 +48,23 @@ const ChatWindow = ({
     }
   }, [loadingMessages]);
 
-  // Scroll to bottom smoothly when a new message arrives
+  // Scroll when a new message is added
   useEffect(() => {
     if (messages.length === 0) return;
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages.length]);
+
+  // While streaming, keep scrolling to bottom at animation rate
+  useEffect(() => {
+    if (!loadingResponse) return;
+    const el = chatContainerRef.current;
+    if (!el) return;
+    const id = setInterval(() => {
+      const gap = el.scrollHeight - el.scrollTop - el.clientHeight;
+      if (gap < 200) el.scrollTop = el.scrollHeight; // follow cursor unless user scrolled up
+    }, 40);
+    return () => clearInterval(id);
+  }, [loadingResponse]);
 
   const handleScroll = useCallback(() => {
     const el = chatContainerRef.current;
@@ -285,56 +297,77 @@ const ChatWindow = ({
   );
 };
 
-/* ── Smooth typewriter for streaming responses ── */
+/* ── Smooth word-by-word typewriter for streaming responses ── */
+const nextWordEnd = (text, from) => {
+  let i = from;
+  while (i < text.length && text[i] === ' ') i++;          // skip leading spaces
+  while (i < text.length && text[i] !== ' ' && text[i] !== '\n') i++; // consume word
+  if (i < text.length) i++;                                 // include trailing space / newline
+  return i;
+};
+
 const TypewriterText = ({ content, streaming, rtl }) => {
   const [shown, setShown] = useState(() => (streaming ? "" : content));
-  const ref = useRef({ content, streaming });
-  ref.current.content = content;
+  const [done, setDone]   = useState(!streaming);
+  const wasStreaming       = useRef(streaming);
+  const ref                = useRef({ content, streaming });
+  ref.current.content   = content;
   ref.current.streaming = streaming;
 
-  // When streaming stops (or content changes on a non-streaming message), show everything immediately
+  // Finalize immediately when streaming prop flips to false externally
   useEffect(() => {
-    if (!streaming) setShown(content);
+    if (!streaming) { setShown(content); setDone(true); }
   }, [content, streaming]);
 
-  // Animation loop — starts once on mount for streaming messages
+  // Word-by-word interval — fires every 28 ms (≈ 35 words/sec natural pace)
   useEffect(() => {
     if (!streaming) return;
-    let len = 0;
-    let alive = true;
-    let rafId;
-    const tick = () => {
-      if (!alive) return;
+    const lenRef = { current: 0 };
+
+    const id = setInterval(() => {
       const { content: c, streaming: s } = ref.current;
-      if (!s) { setShown(c); return; }                     // stream ended → show rest instantly
-      if (len < c.length) {
-        const gap = c.length - len;
-        len = Math.min(len + (gap > 60 ? 8 : 3), c.length); // speed up when buffer is large
-        setShown(c.slice(0, len));
+
+      if (!s) {
+        // Stream ended → show everything at once and switch to formatted markdown
+        setShown(c);
+        setDone(true);
+        clearInterval(id);
+        return;
       }
-      rafId = requestAnimationFrame(tick);
-    };
-    rafId = requestAnimationFrame(tick);
-    return () => { alive = false; cancelAnimationFrame(rafId); };
+
+      if (lenRef.current < c.length) {
+        lenRef.current = nextWordEnd(c, lenRef.current);
+        setShown(c.slice(0, lenRef.current));
+      }
+    }, 28);
+
+    return () => clearInterval(id);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const mdComponents = {
-    p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+    p:      ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
     strong: ({ children }) => <strong className="font-semibold text-emerald-700">{children}</strong>,
-    ul: ({ children }) => <ul className="list-disc list-inside space-y-1 my-2">{children}</ul>,
-    ol: ({ children }) => <ol className="list-decimal list-inside space-y-1 my-2">{children}</ol>,
-    li: ({ children }) => <li className={rtl ? "mr-2" : "ml-2"}>{children}</li>,
+    ul:     ({ children }) => <ul className="list-disc list-inside space-y-1 my-2">{children}</ul>,
+    ol:     ({ children }) => <ol className="list-decimal list-inside space-y-1 my-2">{children}</ol>,
+    li:     ({ children }) => <li className={rtl ? "mr-2" : "ml-2"}>{children}</li>,
   };
 
-  if (!shown && streaming) {
-    return <span className="inline-block w-2 h-4 bg-emerald-500 rounded-sm animate-pulse" />;
+  // Stream complete → formatted markdown fades in smoothly
+  if (done) {
+    return (
+      <div className={wasStreaming.current ? "animate-fade-only" : ""}>
+        <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>{shown}</ReactMarkdown>
+      </div>
+    );
   }
 
+  // Streaming → plain text (no broken markdown mid-stream) + blinking cursor
+  if (!shown) return <span className="cursor-block" />;
+
   return (
-    <>
-      <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>{shown}</ReactMarkdown>
-      {streaming && <span className="inline-block w-[2px] h-[1em] bg-emerald-500 ml-0.5 align-middle animate-pulse" />}
-    </>
+    <span style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+      {shown}<span className="cursor-blink" />
+    </span>
   );
 };
 
