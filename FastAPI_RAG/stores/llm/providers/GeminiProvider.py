@@ -103,10 +103,26 @@ class GeminiProvider(LLMInterface):
                     max_output_tokens=max_output_tokens, temperature=temperature),
                 stream=True,
             )
+            line_counts: dict = {}
+            buffer = ""
             for chunk in response:
                 piece = getattr(chunk, "text", None)
-                if piece:
-                    yield piece
+                if not piece:
+                    continue
+                buffer += piece
+                lines = buffer.split("\n")
+                repeated = False
+                for line in lines:
+                    stripped = line.strip()
+                    if len(stripped) > 15:
+                        line_counts[stripped] = line_counts.get(stripped, 0) + 1
+                        if line_counts[stripped] > 2:
+                            repeated = True
+                            break
+                if repeated:
+                    self.logger.warning("Gemini repetition loop detected — stopping stream")
+                    break
+                yield piece
         except Exception as e:
             self.logger.error(f"Error streaming text with Gemini: {e}")
 

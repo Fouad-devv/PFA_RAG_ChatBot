@@ -304,6 +304,15 @@ export const handGetResponseStream = async (req, res) => {
               res.write(`data: ${JSON.stringify({ type: 'token', token })}\n\n`);
             }
           } catch {}
+        } else if (eventType === 'error' && dataStr) {
+          try {
+            const detail = JSON.parse(dataStr).detail || 'no_results';
+            const msg = detail === 'no_results'
+              ? "Je ne trouve pas d'information sur ce sujet dans les documents du Code du Travail marocain."
+              : "Une erreur est survenue. Veuillez réessayer.";
+            fullAnswer = msg;
+            res.write(`data: ${JSON.stringify({ type: 'token', token: msg })}\n\n`);
+          } catch {}
         }
       }
     }

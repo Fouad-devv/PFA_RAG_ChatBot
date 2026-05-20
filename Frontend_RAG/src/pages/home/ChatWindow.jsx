@@ -41,11 +41,20 @@ const ChatWindow = ({
   const messagesEndRef  = useRef(null);
   const [showScrollBtn, setShowScrollBtn] = useState(false);
   const [copiedId, setCopiedId]           = useState(null);
-  const userScrolledRef  = useRef(false);
+  const userScrolledRef    = useRef(false);
+  const loadingConvRef     = useRef(false);
 
-  // Scroll to bottom instantly when a conversation finishes loading
+  // When a conversation is selected: jump to top instantly so smooth scroll is visible
+  useEffect(() => {
+    if (!activeConversation?._id) return;
+    loadingConvRef.current = true;
+    if (chatContainerRef.current) chatContainerRef.current.scrollTop = 0;
+  }, [activeConversation?._id]);
+
+  // When messages finish loading: smooth scroll top → bottom
   useEffect(() => {
     if (!loadingMessages) {
+      loadingConvRef.current = false;
       userScrolledRef.current = false;
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }
@@ -59,11 +68,13 @@ const ChatWindow = ({
   }, [messages.length]);
 
   // Auto-scroll on any DOM content change (covers server stream + TypewriterText animation)
+  // Paused while a conversation is loading so the smooth scroll animation is not interrupted
   useEffect(() => {
     const container = chatContainerRef.current;
     if (!container) return;
     const mo = new MutationObserver(() => {
-      if (!userScrolledRef.current) container.scrollTop = container.scrollHeight;
+      if (!userScrolledRef.current && !loadingConvRef.current)
+        container.scrollTop = container.scrollHeight;
     });
     mo.observe(container, { childList: true, subtree: true });
     return () => mo.disconnect();
