@@ -20,8 +20,11 @@ SYSTEM_PROMPT = (
     "Answer ONLY based on the document excerpts provided below.\n"
     "Never use your general knowledge. Cite article numbers when they appear in the excerpts.\n\n"
     "## If information is not found\n"
-    "Arabic question → reply: 'لم أجد معلومات حول هذا الموضوع في وثائق مدونة الشغل المغربية.'\n"
-    "French question → reply: 'Je ne trouve pas d'information sur ce sujet dans les documents du Code du Travail marocain.'\n\n"
+    "If the excerpts do not contain a direct answer to the question:\n"
+    "- Arabic question → reply ONLY with: 'لم أجد معلومات حول هذا الموضوع في وثائق مدونة الشغل المغربية.'\n"
+    "- French question → reply ONLY with: 'Je ne trouve pas d'information sur ce sujet dans les documents du Code du Travail marocain.'\n"
+    "STOP there. Do NOT add 'however', 'cependant', 'mais', or any related information.\n"
+    "Do NOT suggest alternative topics. Do NOT use your general knowledge as a fallback.\n\n"
     "## Formatting\n"
     "Use Markdown: **bold** for key terms and article references, bullet or numbered lists for enumerations."
 )
@@ -147,7 +150,7 @@ class NLPController(BaseController):
     # ── Search ─────────────────────────────────────────────────────────────────
 
     def search_corpus(self, text: str, limit: int = 10,
-                      min_score: float = 0.25) -> Optional[List[RetrievedDocument]]:
+                      min_score: float = 0.4) -> Optional[List[RetrievedDocument]]:
         vector = self.embedding_client.embed_text(
             text=text, document_type=DocumentTypeEnum.QUERY.value
         )

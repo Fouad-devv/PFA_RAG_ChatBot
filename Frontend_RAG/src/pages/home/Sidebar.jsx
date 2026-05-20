@@ -359,9 +359,11 @@ const ConvItem = ({
         />
       ) : (
         <div className="min-w-0 flex-1">
-          <p className={`text-sm truncate font-medium transition-colors ${isActive ? "text-emerald-300" : "text-slate-400 group-hover:text-slate-200"}`}>
-            {c.title}
-          </p>
+          <div className="overflow-x-auto custom-scrollbar">
+            <p className={`text-sm whitespace-nowrap font-medium transition-colors ${isActive ? "text-emerald-300" : "text-slate-400 group-hover:text-slate-200"}`}>
+              {c.title}
+            </p>
+          </div>
           <p className="text-[11px] text-slate-600 mt-0.5 truncate">{dayjs(c.updatedAt).fromNow()}</p>
         </div>
       )}
