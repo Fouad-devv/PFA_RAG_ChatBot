@@ -255,7 +255,7 @@ export const Public = () => {
         </div>
 
         {/* Input */}
-        <div className="flex-shrink-0 px-4 md:px-10 lg:px-20 xl:px-36 py-4 bg-white">
+        <div className="flex-shrink-0 px-4 md:px-10 lg:px-20 xl:px-36 py-4 bg-slate-50">
           <div className="input-card flex items-end gap-3 px-4 py-3">
             <textarea
               ref={textareaRef}
