@@ -1,4 +1,5 @@
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, useLocation } from 'react-router-dom';
+import { useEffect } from 'react';
 import useAxiosPrivate from './api/useAxiosPrivate';
 import { useKeycloak } from '@react-keycloak/web';
 
@@ -9,9 +10,21 @@ import { Public } from './pages/public/Public';
 import { Home } from './pages/home/Home';
 import { Admin } from './pages/admin/Admin';
 
+const PAGE_TITLES = {
+  '/': 'Code du Travail Marocain',
+  '/chat': 'Chat Public | Code du Travail',
+  '/home': 'Accueil | Code du Travail',
+  '/admin': 'Administration | Code du Travail',
+};
+
 function App() {
   const { keycloak, initialized } = useKeycloak();
   const axiosPrivate = useAxiosPrivate();
+  const location = useLocation();
+
+  useEffect(() => {
+    document.title = PAGE_TITLES[location.pathname] ?? 'Code du Travail Marocain';
+  }, [location.pathname]);
 
   return (
     <Routes>
